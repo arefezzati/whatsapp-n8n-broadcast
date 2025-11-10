@@ -1,0 +1,158 @@
+{
+  "countries": {
+    "TR": { "name": "Türkiye", "flag": "🇹🇷", "code": "+90", "prefixes": ["90"], "language": "tr" },
+    "CY": { "name": "Kıbrıs", "flag": "🇨🇾", "code": "+357", "prefixes": ["357"], "language": "tr" },
+    
+    "DE": { "name": "Almanya", "flag": "🇩🇪", "code": "+49", "prefixes": ["49"], "language": "en" },
+    "FR": { "name": "Fransa", "flag": "🇫🇷", "code": "+33", "prefixes": ["33"], "language": "en" },
+    "GB": { "name": "İngiltere", "flag": "🇬🇧", "code": "+44", "prefixes": ["44"], "language": "en" },
+    "IT": { "name": "İtalya", "flag": "🇮🇹", "code": "+39", "prefixes": ["39"], "language": "en" },
+    "ES": { "name": "İspanya", "flag": "🇪🇸", "code": "+34", "prefixes": ["34"], "language": "en" },
+    "NL": { "name": "Hollanda", "flag": "🇳🇱", "code": "+31", "prefixes": ["31"], "language": "en" },
+    "BE": { "name": "Belçika", "flag": "🇧🇪", "code": "+32", "prefixes": ["32"], "language": "en" },
+    "AT": { "name": "Avusturya", "flag": "🇦🇹", "code": "+43", "prefixes": ["43"], "language": "en" },
+    "CH": { "name": "İsviçre", "flag": "🇨🇭", "code": "+41", "prefixes": ["41"], "language": "en" },
+    "SE": { "name": "İsveç", "flag": "🇸🇪", "code": "+46", "prefixes": ["46"], "language": "en" },
+    "NO": { "name": "Norveç", "flag": "🇳🇴", "code": "+47", "prefixes": ["47"], "language": "en" },
+    "DK": { "name": "Danimarka", "flag": "🇩🇰", "code": "+45", "prefixes": ["45"], "language": "en" },
+    "FI": { "name": "Finlandiya", "flag": "🇫🇮", "code": "+358", "prefixes": ["358"], "language": "en" },
+    "PL": { "name": "Polonya", "flag": "🇵🇱", "code": "+48", "prefixes": ["48"], "language": "en" },
+    "CZ": { "name": "Çekya", "flag": "🇨🇿", "code": "+420", "prefixes": ["420"], "language": "en" },
+    "HU": { "name": "Macaristan", "flag": "🇭🇺", "code": "+36", "prefixes": ["36"], "language": "en" },
+    "SK": { "name": "Slovakya", "flag": "🇸🇰", "code": "+421", "prefixes": ["421"], "language": "en" },
+    "SI": { "name": "Slovenya", "flag": "🇸🇮", "code": "+386", "prefixes": ["386"], "language": "en" },
+    "HR": { "name": "Hırvatistan", "flag": "🇭🇷", "code": "+385", "prefixes": ["385"], "language": "en" },
+    "BA": { "name": "Bosna Hersek", "flag": "🇧🇦", "code": "+387", "prefixes": ["387"], "language": "en" },
+    "RS": { "name": "Sırbistan", "flag": "🇷🇸", "code": "+381", "prefixes": ["381"], "language": "en" },
+    "ME": { "name": "Karadağ", "flag": "🇲🇪", "code": "+382", "prefixes": ["382"], "language": "en" },
+    "MK": { "name": "Kuzey Makedonya", "flag": "🇲🇰", "code": "+389", "prefixes": ["389"], "language": "en" },
+    "AL": { "name": "Arnavutluk", "flag": "🇦🇱", "code": "+355", "prefixes": ["355"], "language": "en" },
+    "BG": { "name": "Bulgaristan", "flag": "🇧🇬", "code": "+359", "prefixes": ["359"], "language": "en" },
+    "RO": { "name": "Romanya", "flag": "🇷🇴", "code": "+40", "prefixes": ["40"], "language": "en" },
+    "GR": { "name": "Yunanistan", "flag": "🇬🇷", "code": "+30", "prefixes": ["30"], "language": "en" },
+    "PT": { "name": "Portekiz", "flag": "🇵🇹", "code": "+351", "prefixes": ["351"], "language": "en" },
+    "IE": { "name": "İrlanda", "flag": "🇮🇪", "code": "+353", "prefixes": ["353"], "language": "en" },
+    "LU": { "name": "Lüksemburg", "flag": "🇱🇺", "code": "+352", "prefixes": ["352"], "language": "en" },
+    "MT": { "name": "Malta", "flag": "🇲🇹", "code": "+356", "prefixes": ["356"], "language": "en" },
+    "IS": { "name": "İzlanda", "flag": "🇮🇸", "code": "+354", "prefixes": ["354"], "language": "en" },
+    "LT": { "name": "Litvanya", "flag": "🇱🇹", "code": "+370", "prefixes": ["370"], "language": "en" },
+    "LV": { "name": "Letonya", "flag": "🇱🇻", "code": "+371", "prefixes": ["371"], "language": "en" },
+    "EE": { "name": "Estonya", "flag": "🇪🇪", "code": "+372", "prefixes": ["372"], "language": "en" },
+    
+    "RU": { "name": "Rusya", "flag": "🇷🇺", "code": "+7", "prefixes": ["7"], "language": "ru" },
+    "UA": { "name": "Ukrayna", "flag": "🇺🇦", "code": "+380", "prefixes": ["380"], "language": "ru" },
+    "BY": { "name": "Belarus", "flag": "🇧🇾", "code": "+375", "prefixes": ["375"], "language": "ru" },
+    "KZ": { "name": "Kazakistan", "flag": "🇰🇿", "code": "+7", "prefixes": ["76", "77"], "language": "ru" },
+    "UZ": { "name": "Özbekistan", "flag": "🇺🇿", "code": "+998", "prefixes": ["998"], "language": "ru" },
+    "KG": { "name": "Kırgızistan", "flag": "🇰🇬", "code": "+996", "prefixes": ["996"], "language": "ru" },
+    "TJ": { "name": "Tacikistan", "flag": "🇹🇯", "code": "+992", "prefixes": ["992"], "language": "ru" },
+    "TM": { "name": "Türkmenistan", "flag": "🇹🇲", "code": "+993", "prefixes": ["993"], "language": "ru" },
+    "AZ": { "name": "Azerbaycan", "flag": "🇦🇿", "code": "+994", "prefixes": ["994"], "language": "ru" },
+    "AM": { "name": "Ermenistan", "flag": "🇦🇲", "code": "+374", "prefixes": ["374"], "language": "ru" },
+    "GE": { "name": "Gürcistan", "flag": "🇬🇪", "code": "+995", "prefixes": ["995"], "language": "en" },
+    "MD": { "name": "Moldova", "flag": "🇲🇩", "code": "+373", "prefixes": ["373"], "language": "ru" },
+    
+    "US": { "name": "Amerika", "flag": "🇺🇸", "code": "+1", "prefixes": ["1"], "language": "en" },
+    "CA": { "name": "Kanada", "flag": "🇨🇦", "code": "+1", "prefixes": ["1"], "language": "en" },
+    "AU": { "name": "Avustralya", "flag": "🇦🇺", "code": "+61", "prefixes": ["61"], "language": "en" },
+    "NZ": { "name": "Yeni Zelanda", "flag": "🇳🇿", "code": "+64", "prefixes": ["64"], "language": "en" },
+    
+    "SA": { "name": "Suudi Arabistan", "flag": "🇸🇦", "code": "+966", "prefixes": ["966"], "language": "ar" },
+    "AE": { "name": "BAE", "flag": "🇦🇪", "code": "+971", "prefixes": ["971"], "language": "ar" },
+    "QA": { "name": "Katar", "flag": "🇶🇦", "code": "+974", "prefixes": ["974"], "language": "ar" },
+    "KW": { "name": "Kuveyt", "flag": "🇰🇼", "code": "+965", "prefixes": ["965"], "language": "ar" },
+    "BH": { "name": "Bahreyn", "flag": "🇧🇭", "code": "+973", "prefixes": ["973"], "language": "ar" },
+    "OM": { "name": "Umman", "flag": "🇴🇲", "code": "+968", "prefixes": ["968"], "language": "ar" },
+    "JO": { "name": "Ürdün", "flag": "🇯🇴", "code": "+962", "prefixes": ["962"], "language": "ar" },
+    "LB": { "name": "Lübnan", "flag": "🇱🇧", "code": "+961", "prefixes": ["961"], "language": "ar" },
+    "IL": { "name": "İsrail", "flag": "🇮🇱", "code": "+972", "prefixes": ["972"], "language": "en" },
+    "EG": { "name": "Mısır", "flag": "🇪🇬", "code": "+20", "prefixes": ["20"], "language": "ar" },
+    "IQ": { "name": "Irak", "flag": "🇮🇶", "code": "+964", "prefixes": ["964"], "language": "ar" },
+    "SY": { "name": "Suriye", "flag": "🇸🇾", "code": "+963", "prefixes": ["963"], "language": "ar" },
+    "YE": { "name": "Yemen", "flag": "🇾🇪", "code": "+967", "prefixes": ["967"], "language": "ar" },
+    
+    "JP": { "name": "Japonya", "flag": "🇯🇵", "code": "+81", "prefixes": ["81"], "language": "en" },
+    "KR": { "name": "Güney Kore", "flag": "🇰🇷", "code": "+82", "prefixes": ["82"], "language": "en" },
+    "CN": { "name": "Çin", "flag": "🇨🇳", "code": "+86", "prefixes": ["86"], "language": "en" },
+    "IN": { "name": "Hindistan", "flag": "🇮🇳", "code": "+91", "prefixes": ["91"], "language": "en" },
+    "ID": { "name": "Endonezya", "flag": "🇮🇩", "code": "+62", "prefixes": ["62"], "language": "en" },
+    "TH": { "name": "Tayland", "flag": "🇹🇭", "code": "+66", "prefixes": ["66"], "language": "en" },
+    "MY": { "name": "Malezya", "flag": "🇲🇾", "code": "+60", "prefixes": ["60"], "language": "en" },
+    "SG": { "name": "Singapur", "flag": "🇸🇬", "code": "+65", "prefixes": ["65"], "language": "en" },
+    "PH": { "name": "Filipinler", "flag": "🇵🇭", "code": "+63", "prefixes": ["63"], "language": "en" },
+    "VN": { "name": "Vietnam", "flag": "🇻🇳", "code": "+84", "prefixes": ["84"], "language": "en" },
+    
+    "BR": { "name": "Brezilya", "flag": "🇧🇷", "code": "+55", "prefixes": ["55"], "language": "en" },
+    "AR": { "name": "Arjantin", "flag": "🇦🇷", "code": "+54", "prefixes": ["54"], "language": "en" },
+    "MX": { "name": "Meksika", "flag": "🇲🇽", "code": "+52", "prefixes": ["52"], "language": "en" },
+    "CL": { "name": "Şili", "flag": "🇨🇱", "code": "+56", "prefixes": ["56"], "language": "en" },
+    "CO": { "name": "Kolombiya", "flag": "🇨🇴", "code": "+57", "prefixes": ["57"], "language": "en" },
+    
+    "GH": { "name": "Gana", "flag": "🇬🇭", "code": "+233", "prefixes": ["233"], "language": "en" },
+    "NG": { "name": "Nijerya", "flag": "🇳🇬", "code": "+234", "prefixes": ["234"], "language": "en" },
+    "KE": { "name": "Kenya", "flag": "🇰🇪", "code": "+254", "prefixes": ["254"], "language": "en" },
+    "ZA": { "name": "Güney Afrika", "flag": "🇿🇦", "code": "+27", "prefixes": ["27"], "language": "en" },
+    "MA": { "name": "Fas", "flag": "🇲🇦", "code": "+212", "prefixes": ["212"], "language": "ar" },
+    "DZ": { "name": "Cezayir", "flag": "🇩🇿", "code": "+213", "prefixes": ["213"], "language": "ar" },
+    "TN": { "name": "Tunus", "flag": "🇹🇳", "code": "+216", "prefixes": ["216"], "language": "ar" },
+    "LY": { "name": "Libya", "flag": "🇱🇾", "code": "+218", "prefixes": ["218"], "language": "ar" },
+    
+    "UNKNOWN": { "name": "Bilinmeyen Ülke", "flag": "🌍", "code": "?", "prefixes": [], "language": "en" }
+  },
+    
+    "ZA": { "name": "Güney Afrika", "flag": "🇿🇦", "code": "+27", "prefixes": ["27"], "language": "en" },
+    "NG": { "name": "Nijerya", "flag": "🇳🇬", "code": "+234", "prefixes": ["234"], "language": "en" },
+    "KE": { "name": "Kenya", "flag": "🇰🇪", "code": "+254", "prefixes": ["254"], "language": "en" },
+    "MA": { "name": "Fas", "flag": "🇲🇦", "code": "+212", "prefixes": ["212"], "language": "ar" },
+    "TN": { "name": "Tunus", "flag": "🇹🇳", "code": "+216", "prefixes": ["216"], "language": "ar" },
+    "DZ": { "name": "Cezayir", "flag": "🇩🇿", "code": "+213", "prefixes": ["213"], "language": "ar" },
+    "LY": { "name": "Libya", "flag": "🇱🇾", "code": "+218", "prefixes": ["218"], "language": "ar" }
+  },
+  
+  "groups": {
+    "turkey": {
+      "name": "🇹🇷 TÜRKİYE & KIBRIS",
+      "countries": ["TR", "CY"]
+    },
+    "europe": {
+      "name": "🇪🇺 AVRUPA ÜLKELERİ", 
+      "countries": ["DE", "FR", "GB", "IT", "ES", "NL", "BE", "AT", "CH", "SE", "NO", "DK", "FI", "PL", "CZ", "HU", "SK", "SI", "HR", "BA", "RS", "ME", "MK", "AL", "BG", "RO", "GR", "PT", "IE", "LU", "MT", "IS", "LT", "LV", "EE"]
+    },
+    "soviet": {
+      "name": "🏛️ ESKİ SOVYET ÜLKELERİ",
+      "countries": ["RU", "UA", "BY", "KZ", "UZ", "KG", "TJ", "TM", "AZ", "AM", "GE", "MD"]
+    },
+    "north_america": {
+      "name": "🌎 KUZEY AMERİKA",
+      "countries": ["US", "CA"]
+    },
+    "oceania": {
+      "name": "🌏 OKYANUSYA", 
+      "countries": ["AU", "NZ"]
+    },
+    "gulf": {
+      "name": "🌏 KÖRFEZ ÜLKELERİ",
+      "countries": ["SA", "AE", "QA", "KW", "BH", "OM"]
+    },
+    "middle_east": {
+      "name": "🌏 ORTA DOĞU",
+      "countries": ["JO", "LB", "IL", "EG", "IQ", "SY", "YE"]
+    },
+    "asia": {
+      "name": "🌏 ASYA",
+      "countries": ["JP", "KR", "CN", "IN", "ID", "TH", "MY", "SG", "PH", "VN"]
+    },
+    "south_america": {
+      "name": "🌎 GÜNEY AMERİKA",
+      "countries": ["BR", "AR", "MX", "CL", "CO"]
+    },
+    "africa": {
+      "name": "🌍 AFRİKA",
+      "countries": ["GH", "NG", "KE", "ZA", "MA", "TN", "DZ", "LY"]
+    },
+    "unknown": {
+      "name": "🌍 BİLİNMEYEN ÜLKELER",
+      "countries": ["UNKNOWN"]
+    }
+  }
+}

@@ -1,0 +1,31 @@
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# WhatsApp Session (çok önemli - gizli kalmalı!)
+wweb-session/
+auth_info_baileys/
+*.session.json
+
+# Temp files
+tmp_videos/
+*.tmp
+
+# Environment variables
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# JSON data files (optional - eğer public yapmak istemiyorsan)
+# contacts.json
+# groups.json

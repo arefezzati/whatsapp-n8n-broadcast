@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Kişi Yönetimi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .controls {
+            padding: 24px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #25D366;
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: #25D366;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #128C7E;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .stats {
+            display: flex;
+            gap: 16px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .country-section {
+            margin-bottom: 32px;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .country-header {
+            background: #f8f9fa;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .country-header:hover {
+            background: #e9ecef;
+        }
+
+        .country-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .country-flag {
+            font-size: 24px;
+        }
+
+        .country-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .country-code {
+            background: #25D366;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .country-stats {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .toggle-arrow {
+            font-size: 20px;
+            transition: transform 0.3s;
+        }
+
+        .country-section.collapsed .toggle-arrow {
+            transform: rotate(-90deg);
+        }
+
+        .contacts-list {
+            display: none;
+            padding: 20px;
+        }
+
+        .country-section:not(.collapsed) .contacts-list {
+            display: block;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .contact-item:hover {
+            border-color: #25D366;
+            transform: translateX(4px);
+        }
+
+        .contact-item.selected {
+            background: #f0f9f0;
+            border-color: #25D366;
+        }
+
+        .contact-checkbox {
+            margin-right: 16px;
+            width: 18px;
+            height: 18px;
+            accent-color: #25D366;
+        }
+
+        .contact-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            margin-right: 16px;
+            font-size: 14px;
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+
+        .contact-name {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 4px;
+        }
+
+        .contact-phone {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .contact-language {
+            margin-left: auto;
+            padding: 4px 12px;
+            background: #e9ecef;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .language-tr { background: #ffebee; color: #c62828; }
+        .language-en { background: #e3f2fd; color: #1565c0; }
+        .language-ru { background: #f3e5f5; color: #7b1fa2; }
+        .language-ar { background: #fff3e0; color: #ef6c00; }
+
+        .add-contact-form {
+            background: #f8f9fa;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            display: none;
+        }
+
+        .add-contact-form.show {
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #25D366;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: #6c757d;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 12px;
+            color: #495057;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .country-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .country-stats {
+                align-self: flex-end;
+            }
+
+            .contact-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .contact-language {
+                margin-left: 0;
+                align-self: flex-end;
+            }
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #25D366;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 WhatsApp Kişi Yönetimi</h1>
+            <p>Ülke bazlı kişi listelerini yönetin ve hedefli mesajlaşma yapın</p>
+        </div>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Kişi ara (ad, telefon, ülke)...">
+            </div>
+            
+            <button class="btn btn-primary" id="addContactBtn">
+                ➕ Yeni Kişi
+            </button>
+            
+            <button class="btn btn-secondary" id="importWhatsAppBtn">
+                📱 WhatsApp'tan İçe Aktar
+            </button>
+            
+            <button class="btn btn-secondary" id="selectAllBtn">
+                ☑️ Tümünü Seç
+            </button>
+            
+            <button class="btn btn-secondary" id="deselectAllBtn">
+                ☐ Tümünü Bırak
+            </button>
+            
+            <button class="btn btn-primary" id="saveListBtn">
+                💾 Listeyi Kaydet
+            </button>
+            
+            <button class="btn btn-danger" id="clearListBtn">
+                🗑️ Listeyi Temizle
+            </button>
+            
+            <div class="stats">
+                <span>📊 Toplam: <strong id="totalCount">0</strong></span>
+                <span>✅ Seçili: <strong id="selectedCount">0</strong></span>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Yeni Kişi Ekleme Formu -->
+            <div class="add-contact-form" id="addContactForm">
+                <h3 style="margin-bottom: 16px;">🆕 Yeni Kişi Ekle</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Ad Soyad</label>
+                        <input type="text" id="contactName" placeholder="Ali Veli">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefon Numarası</label>
+                        <input type="text" id="contactPhone" placeholder="905551234567">
+                    </div>
+                    <div class="form-group">
+                        <label>Ülke</label>
+                        <select id="contactCountry">
+                            <!-- JavaScript ile doldurulacak -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Dil Tercihi</label>
+                        <select id="contactLanguage">
+                            <option value="tr">🇹🇷 Türkçe</option>
+                            <option value="en">🇬🇧 İngilizce</option>
+                            <option value="ru">🇷🇺 Rusça</option>
+                            <option value="ar">🇸🇦 Arapça</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-secondary" id="cancelAddBtn">❌ İptal</button>
+                    <button class="btn btn-primary" id="saveContactBtn">💾 Kaydet</button>
+                </div>
+            </div>
+
+            <!-- Kişi Listesi -->
+            <div id="contactsList">
+                <!-- JavaScript ile doldurulacak -->
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">
+        <span id="toastMessage">İşlem başarılı!</span>
+    </div>
+
+    <script>
+        class ContactManager {
+            constructor() {
+                this.contacts = [];
+                this.selectedContacts = new Set();
+                this.countries = {};
+                this.countryGroups = {};
+                this.init();
+            }
+
+            async init() {
+                await this.loadCountries();
+                this.populateCountryDropdown();
+                this.bindEvents();
+                await this.loadContacts();
+                this.renderContacts();
+                this.updateStats();
+            }
+
+            async loadCountries() {
+                try {
+                    const response = await fetch('/countries.json');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.countries = data.countries;
+                        this.countryGroups = data.groups;
+                        console.log('Ülkeler yüklendi:', Object.keys(this.countries).length, 'ülke');
+                    } else {
+                        console.error('Countries.json yüklenemedi');
+                        this.useFallbackCountries();
+                    }
+                } catch (error) {
+                    console.error('Ülke verisi yüklenirken hata:', error);
+                    this.useFallbackCountries();
+                }
+            }
+
+            useFallbackCountries() {
+                this.countries = {
+                    'TR': { name: 'Türkiye', flag: '🇹🇷', code: '+90', prefixes: ['90'], language: 'tr' },
+                    'DE': { name: 'Almanya', flag: '🇩🇪', code: '+49', prefixes: ['49'], language: 'en' },
+                    'RU': { name: 'Rusya', flag: '🇷🇺', code: '+7', prefixes: ['7'], language: 'ru' }
+                };
+                this.countryGroups = {
+                    'main': { name: 'Ana Ülkeler', countries: ['TR', 'DE', 'RU'] }
+                };
+            }
+
+            populateCountryDropdown() {
+                const select = document.getElementById('contactCountry');
+                select.innerHTML = '';
+
+                // Grup bazında dropdown oluştur
+                Object.entries(this.countryGroups).forEach(([groupKey, group]) => {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = group.name;
+                    
+                    group.countries.forEach(countryCode => {
+                        const country = this.countries[countryCode];
+                        if (country) {
+                            const option = document.createElement('option');
+                            option.value = countryCode;
+                            option.textContent = `${country.flag} ${country.name} (${country.code})`;
+                            optgroup.appendChild(option);
+                        }
+                    });
+                    
+                    select.appendChild(optgroup);
+                });
+
+                console.log('Dropdown dolduruldu, grup sayısı:', Object.keys(this.countryGroups).length);
+            }
+
+            bindEvents() {
+                document.getElementById('addContactBtn').addEventListener('click', () => this.toggleAddForm());
+                document.getElementById('importWhatsAppBtn').addEventListener('click', () => this.importWhatsAppContacts());
+                document.getElementById('cancelAddBtn').addEventListener('click', () => this.toggleAddForm(false));
+                document.getElementById('saveContactBtn').addEventListener('click', () => this.saveNewContact());
+                document.getElementById('selectAllBtn').addEventListener('click', () => this.selectAll());
+                document.getElementById('deselectAllBtn').addEventListener('click', () => this.deselectAll());
+                document.getElementById('saveListBtn').addEventListener('click', () => this.saveContactsList());
+                document.getElementById('clearListBtn').addEventListener('click', () => this.clearContactsList());
+                document.getElementById('searchInput').addEventListener('input', (e) => this.filterContacts(e.target.value));
+            }
+
+            async loadContacts() {
+                try {
+                    const response = await fetch('/api/contacts');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.contacts = data.contacts || [];
+                        this.selectedContacts = new Set(data.contacts.filter(c => c.active).map(c => c.id));
+                    }
+                } catch (error) {
+                    console.log('İlk yükleme, örnek veri oluşturuluyor...');
+                    this.createSampleData();
+                }
+            }
+
+            createSampleData() {
+                this.contacts = [
+                    { id: 1, name: 'Ahmet Yılmaz', phone: '905551234567', country: 'TR', language: 'tr', active: true },
+                    { id: 2, name: 'Vladimir Putin', phone: '79161234567', country: 'RU', language: 'ru', active: true },
+                    { id: 3, name: 'John Smith', phone: '15551234567', country: 'US', language: 'en', active: false },
+                    { id: 4, name: 'Mohammed Ali', phone: '966501234567', country: 'SA', language: 'ar', active: true },
+                    { id: 5, name: 'Hans Mueller', phone: '491701234567', country: 'DE', language: 'en', active: true }
+                ];
+                this.selectedContacts = new Set(this.contacts.filter(c => c.active).map(c => c.id));
+            }
+
+            toggleAddForm(show = null) {
+                const form = document.getElementById('addContactForm');
+                if (show === null) {
+                    show = !form.classList.contains('show');
+                }
+                
+                if (show) {
+                    form.classList.add('show');
+                    document.getElementById('contactName').focus();
+                } else {
+                    form.classList.remove('show');
+                    this.clearForm();
+                }
+            }
+
+            clearForm() {
+                document.getElementById('contactName').value = '';
+                document.getElementById('contactPhone').value = '';
+                document.getElementById('contactCountry').value = 'TR';
+                document.getElementById('contactLanguage').value = 'tr';
+            }
+
+            saveNewContact() {
+                const name = document.getElementById('contactName').value.trim();
+                const phone = document.getElementById('contactPhone').value.trim();
+                const country = document.getElementById('contactCountry').value;
+                const language = document.getElementById('contactLanguage').value;
+
+                if (!name || !phone) {
+                    this.showToast('Ad ve telefon numarası gerekli!', 'error');
+                    return;
+                }
+
+                const newContact = {
+                    id: Math.max(...this.contacts.map(c => c.id), 0) + 1,
+                    name,
+                    phone,
+                    country,
+                    language,
+                    active: true
+                };
+
+                this.contacts.push(newContact);
+                this.selectedContacts.add(newContact.id);
+                this.renderContacts();
+                this.updateStats();
+                this.toggleAddForm(false);
+                this.showToast('Kişi başarıyla eklendi!');
+            }
+
+            selectAll() {
+                this.contacts.forEach(contact => {
+                    this.selectedContacts.add(contact.id);
+                });
+                this.renderContacts();
+                this.updateStats();
+            }
+
+            deselectAll() {
+                this.selectedContacts.clear();
+                this.renderContacts();
+                this.updateStats();
+            }
+
+            async saveContactsList() {
+                const activeContacts = this.contacts.map(contact => ({
+                    ...contact,
+                    active: this.selectedContacts.has(contact.id)
+                }));
+
+                try {
+                    const response = await fetch('/api/contacts/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contacts: activeContacts })
+                    });
+
+                    if (response.ok) {
+                        this.showToast('Kişi listesi başarıyla kaydedildi!');
+                    } else {
+                        throw new Error('Kaydetme hatası');
+                    }
+                } catch (error) {
+                    this.showToast('Kaydetme sırasında hata oluştu!', 'error');
+                }
+            }
+
+            async clearContactsList() {
+                // Onay sorusu göster
+                if (!confirm('⚠️ TÜM KİŞİLER SİLİNECEK!\n\nBu işlem geri alınamaz. Devam etmek istediğinizden emin misiniz?')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/contacts/clear', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    if (response.ok) {
+                        this.contacts = [];
+                        this.selectedContacts.clear();
+                        this.renderContacts();
+                        this.showToast('Tüm kişiler başarıyla silindi!', 'success');
+                    } else {
+                        throw new Error('Temizleme hatası');
+                    }
+                } catch (error) {
+                    this.showToast('Temizleme sırasında hata oluştu!', 'error');
+                }
+            }
+
+            async importWhatsAppContacts() {
+                try {
+                    this.showToast('WhatsApp kişileri çekiliyor...', 'info');
+                    
+                    const response = await fetch('/api/import-whatsapp-contacts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        this.showToast(`${result.imported} yeni WhatsApp kişisi eklendi!`);
+                        // Kişileri yeniden yükle
+                        await this.loadContacts();
+                        this.renderContacts();
+                        this.updateStats();
+                    } else {
+                        throw new Error(result.error || 'WhatsApp kişileri çekilemedi');
+                    }
+                } catch (error) {
+                    console.error('WhatsApp import hatası:', error);
+                    this.showToast('WhatsApp kişileri çekilemedi: ' + error.message, 'error');
+                }
+            }
+
+            filterContacts(searchTerm) {
+                const filtered = searchTerm.toLowerCase();
+                document.querySelectorAll('.country-section').forEach(section => {
+                    let hasVisibleContacts = false;
+                    section.querySelectorAll('.contact-item').forEach(item => {
+                        const name = item.querySelector('.contact-name').textContent.toLowerCase();
+                        const phone = item.querySelector('.contact-phone').textContent.toLowerCase();
+                        const country = section.querySelector('.country-name').textContent.toLowerCase();
+                        
+                        const isVisible = name.includes(filtered) || phone.includes(filtered) || country.includes(filtered);
+                        item.style.display = isVisible ? 'flex' : 'none';
+                        if (isVisible) hasVisibleContacts = true;
+                    });
+                    section.style.display = hasVisibleContacts ? 'block' : 'none';
+                });
+            }
+
+            renderContacts() {
+                const contactsList = document.getElementById('contactsList');
+                const groupedContacts = this.groupByCountry();
+
+                if (Object.keys(groupedContacts).length === 0) {
+                    contactsList.innerHTML = `
+                        <div class="empty-state">
+                            <h3>📱 Henüz kişi eklenmemiş</h3>
+                            <p>Yeni kişi eklemek için yukarıdaki "Yeni Kişi" butonunu kullanın.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                
+                Object.entries(groupedContacts).forEach(([countryCode, contacts]) => {
+                    const country = this.countries[countryCode] || { 
+                        name: countryCode, 
+                        flag: '🌐', 
+                        code: '+' + countryCode 
+                    };
+                    const selectedInCountry = contacts.filter(c => this.selectedContacts.has(c.id)).length;
+                    
+                    html += `
+                        <div class="country-section" data-country="${countryCode}">
+                            <div class="country-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                <div class="country-info">
+                                    <span class="country-flag">${country.flag}</span>
+                                    <span class="country-name">${country.name}</span>
+                                    <span class="country-code">${country.code}</span>
+                                </div>
+                                <div class="country-stats">
+                                    <span>${selectedInCountry}/${contacts.length} seçili</span>
+                                    <span class="toggle-arrow">▼</span>
+                                </div>
+                            </div>
+                            <div class="contacts-list">
+                                ${contacts.map(contact => this.renderContact(contact)).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                contactsList.innerHTML = html;
+            }
+
+            renderContact(contact) {
+                const isSelected = this.selectedContacts.has(contact.id);
+                const initials = contact.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                return `
+                    <div class="contact-item ${isSelected ? 'selected' : ''}" data-id="${contact.id}">
+                        <input type="checkbox" class="contact-checkbox" ${isSelected ? 'checked' : ''} 
+                               onchange="contactManager.toggleContact(${contact.id})">
+                        <div class="contact-avatar">${initials}</div>
+                        <div class="contact-info">
+                            <div class="contact-name">${contact.name}</div>
+                            <div class="contact-phone">${contact.phone}</div>
+                        </div>
+                        <div class="contact-language language-${contact.language}">${contact.language.toUpperCase()}</div>
+                    </div>
+                `;
+            }
+
+            groupByCountry() {
+                return this.contacts.reduce((groups, contact) => {
+                    if (!groups[contact.country]) {
+                        groups[contact.country] = [];
+                    }
+                    groups[contact.country].push(contact);
+                    return groups;
+                }, {});
+            }
+
+            toggleContact(contactId) {
+                if (this.selectedContacts.has(contactId)) {
+                    this.selectedContacts.delete(contactId);
+                } else {
+                    this.selectedContacts.add(contactId);
+                }
+                this.updateStats();
+                this.renderContacts();
+            }
+
+            updateStats() {
+                document.getElementById('totalCount').textContent = this.contacts.length;
+                document.getElementById('selectedCount').textContent = this.selectedContacts.size;
+            }
+
+            showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const toastMessage = document.getElementById('toastMessage');
+                
+                toastMessage.textContent = message;
+                
+                if (type === 'error') {
+                    toast.style.background = '#dc3545';
+                } else if (type === 'info') {
+                    toast.style.background = '#17a2b8';
+                } else {
+                    toast.style.background = '#25D366';
+                }
+                
+                toast.classList.add('show');
+                
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            }
+        }
+
+        // Başlat
+        const contactManager = new ContactManager();
+    </script>
+</body>
+</html>

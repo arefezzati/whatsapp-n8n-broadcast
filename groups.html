@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self';">
+    <title>WhatsApp Grup Yönetimi</title>
+    <link rel="stylesheet" href="/assets/css/groups.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <a href="/" class="btn btn-back">⬅️ Ana Sayfa</a>
+                </div>
+                <div class="header-center">
+                    <h1>👥 WhatsApp Grup Yönetimi</h1>
+                    <p>Gruplarınızı organize edin ve video gönderin</p>
+                </div>
+                <div class="header-right">
+                    <a href="/monitor" class="btn btn-monitor">📊 Monitör</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="navigation">
+            <a href="/" class="nav-link">🏠 Ana Sayfa</a>
+            <a href="/contacts" class="nav-link">📱 Kişiler</a>
+            <a href="/groups" class="nav-link active">👥 Gruplar</a>
+        </nav>
+
+        <!-- Kontrol Paneli -->
+        <section class="controls">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Grup ara...">
+            </div>
+
+            <button class="btn btn-secondary" id="importGroupsBtn">
+                📥 WhatsApp Gruplarını İçe Aktar
+            </button>
+
+            <button class="btn btn-success" id="selectAllBtn">
+                ✅ Tümünü Seç
+            </button>
+
+            <button class="btn btn-secondary" id="deselectAllBtn">
+                ❌ Seçimi Kaldır
+            </button>
+
+            <button class="btn btn-success" id="saveListBtn">
+                💾 Listeyi Kaydet
+            </button>
+
+            <button class="btn btn-danger" id="clearListBtn">
+                🗑️ Listeyi Temizle
+            </button>
+        </section>
+
+        <!-- İstatistikler -->
+        <section class="stats">
+            <div class="stat-box">
+                <span class="stat-label">Toplam Grup</span>
+                <span class="stat-value" id="totalGroups">0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Aktif Grup</span>
+                <span class="stat-value" id="activeGroups">0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Toplam Üye</span>
+                <span class="stat-value" id="totalParticipants">0</span>
+            </div>
+        </section>
+
+        <!-- Grup Listesi -->
+        <section class="table-section">
+            <h3>📊 Grup Listesi</h3>
+            <div class="table-wrapper">
+                <table class="groups-table">
+                    <thead>
+                        <tr>
+                            <th>Aktif</th>
+                            <th>Grup Adı</th>
+                            <th>Üye Sayısı</th>
+                            <th>Eklenme Tarihi</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="groupsTableBody">
+                        <!-- Gruplar buraya eklenecek -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Loading Spinner -->
+        <div class="loading-spinner" id="loadingSpinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Yükleniyor...</p>
+        </div>
+
+        <!-- Toast Bildirimleri -->
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <script src="/assets/js/groups.js"></script>
+</body>
+</html>

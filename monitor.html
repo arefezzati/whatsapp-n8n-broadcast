@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Monitörü - WhatsApp Bridge</title>
+    <script>
+        // BASE_PATH global olarak tanımla (server.js tarafından inject edilecek)
+        window.BASE_PATH = "";
+    </script>
+    <link rel="stylesheet" href="assets/css/monitor.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="nav">
+        <h1>📱 WhatsApp Bridge</h1>
+        <div class="nav-menu">
+            <a href="./" class="nav-link">🏠 Ana Sayfa</a>
+            <a href="contacts" class="nav-link">👥 Kişiler</a>
+            <a href="monitor" class="nav-link active">📊 Monitör</a>
+            <a href="#" class="nav-link" onclick="openStatusModal()">⚡ Durum</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>📊 Sistem Monitörü</h1>
+            <p>WhatsApp Bridge performans ve durum takibi</p>
+            <div class="refresh-controls">
+                <button id="toggleRefresh" class="btn btn-primary">⏸️ Durdur</button>
+                <span class="refresh-status">🔄 5sn'de yenileniyor...</span>
+            </div>
+        </div>
+
+        <!-- Ana Durum Kartları -->
+        <div class="status-cards">
+            <div class="status-card">
+                <div class="card-header">
+                    <span class="card-icon">🔗</span>
+                    <h3>WhatsApp Durumu</h3>
+                </div>
+                <div class="card-content">
+                    <div class="status-indicator" id="whatsappStatus">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Kontrol ediliyor...</span>
+                    </div>
+                    <div class="status-details">
+                        <div class="detail-item">
+                            <span class="label">Son Bağlantı:</span>
+                            <span class="value" id="lastConnection">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Uptime:</span>
+                            <span class="value" id="uptime">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-card">
+                <div class="card-header">
+                    <span class="card-icon">📊</span>
+                    <h3>Kuyruk Durumu</h3>
+                </div>
+                <div class="card-content">
+                    <div class="queue-stats">
+                        <div class="queue-item">
+                            <span class="queue-number" id="queueLength">0</span>
+                            <span class="queue-label">Bekleyen İşlem</span>
+                        </div>
+                        <div class="queue-item">
+                            <span class="queue-number" id="processedCount">0</span>
+                            <span class="queue-label">İşlenen Toplam</span>
+                        </div>
+                    </div>
+                    <div class="worker-status">
+                        <span class="worker-indicator" id="workerStatus">
+                            <span class="worker-dot"></span>
+                            <span>Worker: İşlem Bekliyor</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-card">
+                <div class="card-header">
+                    <span class="card-icon">💾</span>
+                    <h3>Cache Durumu</h3>
+                </div>
+                <div class="card-content">
+                    <div class="cache-stats">
+                        <div class="cache-item">
+                            <span class="cache-number" id="cacheSize">0</span>
+                            <span class="cache-label">Cache Sayısı</span>
+                        </div>
+                        <div class="cache-item">
+                            <span class="cache-number" id="cacheHits">0</span>
+                            <span class="cache-label">Cache Hit</span>
+                        </div>
+                    </div>
+                    <div class="cache-efficiency">
+                        <div class="efficiency-bar">
+                            <div class="efficiency-fill" id="cacheEfficiency"></div>
+                        </div>
+                        <span class="efficiency-text" id="cacheEfficiencyText">Hesaplanıyor...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detaylı İstatistikler -->
+        <div class="stats-section">
+            <div class="stats-card">
+                <div class="card-header">
+                    <h3>📈 Performans İstatistikleri</h3>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Bugün Gönderilen</span>
+                        <span class="stat-value" id="todayCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Başarı Oranı</span>
+                        <span class="stat-value" id="successRate">%100</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Ortalama Süre</span>
+                        <span class="stat-value" id="avgTime">2.0s</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Hata Sayısı</span>
+                        <span class="stat-value" id="errorCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-card">
+                <div class="card-header">
+                    <h3>👥 Kişi İstatistikleri</h3>
+                </div>
+                <div class="contacts-stats">
+                    <div class="contact-summary">
+                        <div class="contact-item">
+                            <span class="contact-number" id="totalContacts">0</span>
+                            <span class="contact-label">Toplam Kişi</span>
+                        </div>
+                        <div class="contact-item">
+                            <span class="contact-number" id="activeContacts">0</span>
+                            <span class="contact-label">Aktif Kişi</span>
+                        </div>
+                    </div>
+                    <div class="country-breakdown" id="countryBreakdown">
+                        <!-- Ülke bazlı dağılım burada gösterilecek -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sistem Durumu -->
+        <div class="system-section">
+            <div class="system-card">
+                <div class="card-header">
+                    <h3>🖥️ Sistem Durumu</h3>
+                </div>
+                <div class="system-stats">
+                    <div class="system-item">
+                        <span class="system-label">Memory Usage</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="memoryUsage"></div>
+                        </div>
+                        <span class="system-value" id="memoryText">Hesaplanıyor...</span>
+                    </div>
+                    <div class="system-item">
+                        <span class="system-label">CPU Usage</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="cpuUsage"></div>
+                        </div>
+                        <span class="system-value" id="cpuText">Hesaplanıyor...</span>
+                    </div>
+                    <div class="system-item">
+                        <span class="system-label">Disk Space (/tmp)</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="diskUsage"></div>
+                        </div>
+                        <span class="system-value" id="diskText">Hesaplanıyor...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Son Aktiviteler -->
+        <div class="activity-section">
+            <div class="activity-card">
+                <div class="card-header">
+                    <h3>📝 Son Aktiviteler</h3>
+                    <button id="clearLogs" class="btn btn-secondary">🗑️ Temizle</button>
+                </div>
+                <div class="activity-logs" id="activityLogs">
+                    <div class="log-item loading">
+                        <span class="log-time">--:--:--</span>
+                        <span class="log-message">Aktivite logları yükleniyor...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Modal (aynı modal tüm sayfalarda) -->
+    <div id="statusModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚡ WhatsApp Durum</h3>
+                <span class="close" onclick="closeStatusModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="status-info">
+                    <div class="status-row">
+                        <span class="status-label">Bağlantı Durumu:</span>
+                        <span id="modalStatus" class="status-value">Kontrol ediliyor...</span>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-label">Son Kontrol:</span>
+                        <span id="lastCheck" class="status-value">-</span>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-label">Session:</span>
+                        <span id="sessionInfo" class="status-value">-</span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-danger" onclick="clearSession()">
+                        🗑️ Session Temizle & QR Reset
+                    </button>
+                    <button class="btn btn-secondary" onclick="logoutWhatsApp()">
+                        🚪 Sadece Çıkış Yap
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshStatus()">
+                        🔄 Durumu Yenile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/monitor.js"></script>
+</body>
+</html>

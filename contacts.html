@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self';">
+    <title>WhatsApp Kişi Yönetimi</title>
+    <link rel="stylesheet" href="/assets/css/contacts.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <a href="/" class="btn btn-back">⬅️ Ana Sayfa</a>
+                </div>
+                <div class="header-center">
+                    <h1>📱 WhatsApp Kişi Yönetimi</h1>
+                    <p>Kişilerinizi organize edin ve WhatsApp'a aktarın</p>
+                </div>
+                <div class="header-right">
+                    <a href="/monitor" class="btn btn-monitor">📊 Monitör</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="navigation">
+            <a href="/" class="nav-link">🏠 Ana Sayfa</a>
+            <a href="/contacts" class="nav-link active">📱 Kişiler</a>
+            <a href="/groups" class="nav-link">👥 Gruplar</a>
+        </nav>
+
+        <!-- Kontrol Paneli -->
+        <section class="controls">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Kişi, telefon veya ülke ara...">
+            </div>
+
+            <button class="btn btn-primary" id="addContactBtn">
+                ➕ Yeni Kişi
+            </button>
+
+            <button class="btn btn-secondary" id="importWhatsAppBtn">
+                📥 WhatsApp'tan İçe Aktar
+            </button>
+
+            <button class="btn btn-success" id="selectAllBtn">
+                ✅ Tümünü Seç
+            </button>
+
+            <button class="btn btn-secondary" id="deselectAllBtn">
+                ❌ Seçimi Kaldır
+            </button>
+
+            <button class="btn btn-success" id="saveListBtn">
+                💾 Listeyi Kaydet
+            </button>
+
+            <button class="btn btn-primary" id="sendVideoBtn" style="display: none;">
+                📹 Video Gönder
+            </button>
+
+            <a href="/monitor" class="btn btn-info">
+                📊 Sistem Monitörü
+            </a>
+
+            <button class="btn btn-danger" id="clearListBtn">
+                🗑️ Listeyi Temizle
+            </button>
+        </section>
+
+        <!-- Yeni Kişi Ekleme Formu -->
+        <section class="form-section" id="addContactForm">
+            <h3>📝 Yeni Kişi Ekle</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="contactName">Ad Soyad</label>
+                    <input type="text" id="contactName" class="form-control" placeholder="Örn: Ahmet Yılmaz">
+                </div>
+
+                <div class="form-group">
+                    <label for="contactPhone">Telefon Numarası</label>
+                    <input type="tel" id="contactPhone" class="form-control" placeholder="Örn: 905551234567">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="contactCountry">Ülke</label>
+                    <select id="contactCountry" class="form-control">
+                        <option value="TR">🇹🇷 Türkiye (+90)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="contactLanguage">Dil</label>
+                    <select id="contactLanguage" class="form-control">
+                        <option value="tr">🇹🇷 Türkçe</option>
+                        <option value="en">🇺🇸 English</option>
+                        <option value="ru">🇷🇺 Русский</option>
+                        <option value="ar">🇸🇦 العربية</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="width: 100%;">
+                    <label for="contactMessage">WhatsApp Karşılama Mesajı *</label>
+                    <textarea id="contactMessage" class="form-control" rows="3"
+                              placeholder="Örn: Merhaba! Size özel videolarımızı göndereceğiz..."
+                              required></textarea>
+                    <small class="form-text text-muted">Bu mesaj kişi WhatsApp'a eklenirken otomatik gönderilecek</small>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <button class="btn btn-success" id="saveContactBtn">
+                    ✅ Kaydet
+                </button>
+                <button class="btn btn-secondary" id="cancelAddBtn">
+                    ❌ İptal
+                </button>
+            </div>
+        </section>
+
+        <!-- Video Gönderim Formu -->
+        <!-- Video Gönderim Formu (GİZLENDİ - NGROK MULTIPART SORUNU) -->
+        <section class="form-section" id="sendVideoForm" style="display: none;">
+            <h3>📹 Video Gönderim</h3>
+
+            <!-- Video Upload Area -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Video Dosyaları (Max 5 adet, Toplam 50MB):</label>
+                    <div class="video-upload-area" id="videoUploadArea">
+                        <div class="upload-zone" id="uploadZone">
+                            <div class="upload-icon">📹</div>
+                            <div class="upload-text">
+                                <strong>Videoları buraya sürükleyin</strong>
+                                <br>veya <span class="browse-link">dosya seçin</span>
+                            </div>
+                            <input type="file" id="videoFiles" multiple accept="video/*" style="display: none;">
+                            <div class="upload-info">
+                                MP4, MOV, AVI, MKV formatları desteklenir
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Previews Grid -->
+            <div class="video-previews" id="videoPreviews" style="display: none;">
+                <div class="previews-header">
+                    <h4>📋 Seçilen Videolar</h4>
+                    <div class="upload-stats">
+                        <span id="videoCount">0/5 video</span>
+                        <span id="totalSize">0/50 MB</span>
+                    </div>
+                </div>
+                <div class="video-grid" id="videoGrid">
+                    <!-- Video previews ve caption inputları buraya gelecek -->
+                </div>
+            </div>
+
+            <!-- ESKİ TEK CAPTION INPUT KALDIRILDI - Artık her videonun kendi caption'ı var -->
+
+            <div class="form-row">
+                <button class="btn btn-success" id="sendVideoNowBtn">
+                    🚀 Seçili Kişilere Gönder
+                </button>
+                <button class="btn btn-secondary" id="cancelVideoBtn">
+                    ❌ İptal
+                </button>
+            </div>
+
+            <div class="send-progress" id="sendProgress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Gönderiliyor...</div>
+            </div>
+        </section>
+
+        <!-- İstatistikler -->
+        <section class="controls">
+            <div class="stats">
+                <span>📊 Toplam: <strong id="totalCount">0</strong> kişi</span>
+                <span>✅ Seçili: <strong id="selectedCount">0</strong> kişi</span>
+            </div>
+        </section>
+
+        <!-- Kişi Listesi -->
+        <section class="contacts-section">
+            <h3>👥 Kişi Listesi</h3>
+            <div id="contactsList" class="contacts-list">
+                <!-- Kişiler buraya yüklenecek -->
+            </div>
+        </section>
+    </div>
+
+    <!-- Toast Bildirimi -->
+    <div id="toast" class="toast">
+        <span id="toastMessage">Bildirim mesajı</span>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/assets/js/contacts.js"></script>
+</body>
+</html>

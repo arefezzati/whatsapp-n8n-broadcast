@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-11-08T10:27:42.383Z",
+  "groups": [
+    {
+      "id": "120363420304891608@g.us",
+      "name": "Byte Export",
+      "participantCount": 3,
+      "isActive": true,
+      "isGroup": true,
+      "createdAt": 1755084554,
+      "addedDate": "2025-11-08T10:27:42.368Z"
+    },
+    {
+      "id": "120363424440913839@g.us",
+      "name": "Test grup",
+      "participantCount": 4,
+      "isActive": true,
+      "isGroup": true,
+      "createdAt": 1761124416,
+      "addedDate": "2025-11-08T10:27:42.368Z"
+    }
+  ],
+  "lastWhatsAppImport": "2025-11-08T10:27:42.383Z",
+  "importStats": {
+    "lastImportDate": "2025-11-08T10:27:42.383Z",
+    "whatsappTotal": 2,
+    "whatsappValidGroups": 2,
+    "previousGroupCount": 0,
+    "newGroupsAdded": 2,
+    "totalAfterImport": 2
+  }
+}
