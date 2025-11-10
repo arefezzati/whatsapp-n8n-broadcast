@@ -207,10 +207,16 @@ if (!fs.existsSync(AUTH_DIR)) {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 }
 
-// Forward parametreleri (Baileys için)
-const FORWARD_DELAY = 600;            // 0.6s kişi arası
-const FORWARD_BURST_SIZE = 30;        // 30 kişi sonra mola
-const FORWARD_BURST_COOLDOWN = 60000; // 60s mola
+// Forward parametreleri (Baileys için) - Environment variable destekli
+const FORWARD_DELAY = parseInt(process.env.FORWARD_DELAY || '1200', 10);           // 1.2s default (900-1500ms önerilen)
+const FORWARD_BURST_SIZE = parseInt(process.env.FORWARD_BURST_SIZE || '30', 10);   // Deprecated (chunk kullanılıyor)
+const FORWARD_BURST_COOLDOWN = parseInt(process.env.FORWARD_BURST_COOLDOWN || '105000', 10); // 105s default (90-120s önerilen)
+
+// Chunk parametreleri (Anti-ban için optimize edilmiş)
+const CHUNK_SIZE = parseInt(process.env.CHUNK_SIZE || '12', 10);                   // 12 hedef/chunk (10-15 önerilen)
+
+// Job tracking store (202 async response için)
+const jobStore = new Map(); // { requestId: { status, progress, result, startTime, logs } }
 
 // ngrok public URL (başlatılınca atanacak)
 let TUNNEL_URL = null;
@@ -2214,6 +2220,33 @@ app.get("/open", (req, res) => {
   res.json({ opened: true, url: target });
 });
 
+// Job status endpoint (async 202 response tracking için)
+app.get("/api/job/:requestId", (req, res) => {
+  const { requestId } = req.params;
+  const job = jobStore.get(requestId);
+  
+  if (!job) {
+    return res.status(404).json({ 
+      error: 'Job not found',
+      requestId,
+      note: 'Job may have expired or never existed'
+    });
+  }
+
+  // Job yaşını kontrol et (1 saat sonra sil)
+  const jobAge = Date.now() - job.startTime;
+  if (jobAge > 3600000) { // 1 saat
+    jobStore.delete(requestId);
+    return res.status(410).json({ 
+      error: 'Job expired',
+      requestId,
+      age: Math.round(jobAge / 1000) + 's'
+    });
+  }
+
+  res.json(job);
+});
+
 app.post("/send-video-to-contacts-grouped", async (req, res) => {
   const startTime = Date.now();
   logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, 'started');
@@ -2234,14 +2267,58 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
   const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   logger.info(`[GROUPED-FORWARD] Request ID: ${requestId}, async processing başlatıldı`);
   
+  // Job store'a kaydet (tracking için)
+  jobStore.set(requestId, {
+    status: 'processing',
+    progress: 0,
+    startTime: Date.now(),
+    logs: [],
+    result: null
+  });
+  
   // N8n'e hemen 202 Accepted dön (timeout önleme)
   res.status(202).json({
     success: true,
     message: 'Request accepted, processing in background',
     requestId,
     ready: true,
-    note: 'Video gönderimi arka planda devam ediyor. İlerlemeyi activity log\'dan takip edebilirsiniz.'
+    statusUrl: `/api/job/${requestId}`,
+    note: 'Video gönderimi arka planda devam ediyor. /api/job/:requestId endpoint\'inden durumu sorgulayabilirsiniz.'
   });
+
+  // Job helper: Log ekle
+  const addJobLog = (level, message) => {
+    const job = jobStore.get(requestId);
+    if (job) {
+      job.logs.push({ 
+        level, 
+        message, 
+        timestamp: new Date().toISOString() 
+      });
+      jobStore.set(requestId, job);
+    }
+  };
+
+  // Job helper: Progress güncelle
+  const updateJobProgress = (progress) => {
+    const job = jobStore.get(requestId);
+    if (job) {
+      job.progress = progress;
+      jobStore.set(requestId, job);
+    }
+  };
+
+  // Job helper: Sonuç kaydet
+  const finishJob = (status, result) => {
+    const job = jobStore.get(requestId);
+    if (job) {
+      job.status = status; // 'completed', 'failed', 'stopped'
+      job.result = result;
+      job.endTime = Date.now();
+      job.duration = job.endTime - job.startTime;
+      jobStore.set(requestId, job);
+    }
+  };
 
   // ============ HELPER FUNCTIONS (Anti-Ban & Natural Behavior) ============
   
@@ -2334,6 +2411,22 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     return result;
   };
 
+  // Caption Varyasyon: Grup tipine göre farklı emoji ekle
+  const addCaptionVariation = (caption, targetType) => {
+    if (!caption || caption.trim() === '') return '';
+    
+    // Grup için emoji seti (profesyonel)
+    const groupEmojis = ['', ' ✨', ' 📢', ' 💼', ' 🔔'];
+    
+    // Kişi için emoji seti (samimi)
+    const contactEmojis = ['', ' 👋', ' 😊', ' 🌟', ' 💫', ' ✨'];
+    
+    const emojiSet = targetType === 'group' ? groupEmojis : contactEmojis;
+    const randomEmoji = emojiSet[Math.floor(Math.random() * emojiSet.length)];
+    
+    return caption + randomEmoji;
+  };
+
   // ========================================================================
 
   // Global config'den al (endpoint içinde kullanım için)
@@ -2419,11 +2512,10 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     ];
 
     if (unifiedTargets.length === 0) {
-      return res.json({
-        queued: 0,
-        totalTargets: 0,
-        message: "Aktif hedef bulunamadı (ne aktif grup ne uygun kişi var)."
-      });
+      const errorMsg = "Aktif hedef bulunamadı (ne aktif grup ne uygun kişi var).";
+      finishJob('failed', { error: errorMsg });
+      addJobLog('error', errorMsg);
+      return; // 202 zaten gönderildi, res kullanma
     }
 
     // DOĞAL DAVRANŞ: Hedefleri rastgele karıştır (botnet pattern'den kaçın)
@@ -2432,17 +2524,44 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
 
     logger.info(`[GROUPED-FORWARD] ${unifiedTargets.length} hedef bulundu, ${videoUrls.length} video gönderilecek`);
     addActivityLog('info', `${unifiedTargets.length} hedefe ${videoUrls.length} video gönderiliyor`);
+    addJobLog('info', `${unifiedTargets.length} hedef bulundu, ${videoUrls.length} video gönderilecek`);
 
-    // 2) İLK HEDEFE NORMAL SEND (buffer ile upload edilecek)
+    // 2) İLK HEDEFE NORMAL SEND - RASTGELE KİŞİ SEÇ (Anti-ban)
     let sentMessages = [];
-    const firstTarget = unifiedTargets[0];
+    let firstTarget;
+    
+    // İlk hedef: Kişilerden rastgele seç (grup değil)
+    const contactTargets = unifiedTargets.filter(t => t.type === 'contact');
+    const groupTargets = unifiedTargets.filter(t => t.type === 'group');
+    
+    if (contactTargets.length > 0) {
+      // Rastgele bir kişi seç
+      const randomIndex = Math.floor(Math.random() * contactTargets.length);
+      firstTarget = contactTargets[randomIndex];
+      
+      // Kalan hedefler: diğer kişiler + gruplar (rastgele karışık)
+      const remainingContacts = contactTargets.filter((_, idx) => idx !== randomIndex);
+      const allRemainingTargets = [...remainingContacts, ...groupTargets];
+      shuffleInPlace(allRemainingTargets);
+      
+      logger.info(`[GROUPED-FORWARD] İlk hedef (rastgele kişi): ${firstTarget.name}`);
+      addJobLog('info', `İlk hedef seçildi: ${firstTarget.name} (contact)`);
+    } else {
+      // Kişi yoksa grup seç (fallback)
+      firstTarget = unifiedTargets[0];
+      logger.warn(`[GROUPED-FORWARD] Kişi bulunamadı, ilk hedef grup: ${firstTarget.name}`);
+      addJobLog('warn', `İlk hedef grup: ${firstTarget.name} (contact yok)`);
+    }
 
     logger.info(`[GROUPED-FORWARD] İlk hedef: ${firstTarget.name} (${firstTarget.type})`);
     addActivityLog('info', `İlk hedefe gönderiliyor: ${firstTarget.name}`);
 
     for (let i = 0; i < videoUrls.length; i++) {
       const vUrl = videoUrls[i];
-      const cap = (captions && captions[i]) ? captions[i] : '';
+      const baseCap = (captions && captions[i]) ? captions[i] : '';
+      
+      // Caption varyasyon ekle (ilk hedef için)
+      const cap = addCaptionVariation(baseCap, firstTarget.type);
 
       logger.info(`[SEND] Video ${i + 1}/${videoUrls.length} cache'leniyor...`);
       const cacheStart = Date.now();
@@ -2480,16 +2599,20 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     }
 
     addActivityLog('success', `İlk send tamamlandı: ${firstTarget.name} (${videoUrls.length} video)`);
+    addJobLog('success', `İlk send tamamlandı: ${firstTarget.name}`);
     logger.info(`[GROUPED-FORWARD] İlk hedefe send tamamlandı: ${videoUrls.length} video`);
+    updateJobProgress(10); // %10 tamamlandı
 
     // 3) DİĞER HEDEFLERE FORWARD (Chunk + SafeSend sistemi)
-    const remainingTargets = unifiedTargets.slice(1); // İlk hedefi çıkar
-    const targetChunks = chunk(remainingTargets, 25); // 25'lik gruplara böl
+    // İlk hedefi çıkar + kalan hedefleri yeniden karıştır
+    const remainingTargets = unifiedTargets.filter(t => t.jid !== firstTarget.jid);
+    const targetChunks = chunk(remainingTargets, CHUNK_SIZE); // Environment variable'dan oku
     
     let forwardedCount = 0;
     let totalFailed = 0;
     
-    logger.info(`[GROUPED-FORWARD] ${remainingTargets.length} hedefe forward başlıyor (${targetChunks.length} chunk)`);
+    logger.info(`[GROUPED-FORWARD] ${remainingTargets.length} hedefe forward başlıyor (${targetChunks.length} chunk, chunk size: ${CHUNK_SIZE})`);
+    addJobLog('info', `${remainingTargets.length} hedefe forward başlatıldı (${targetChunks.length} chunk)`);
 
     for (let chunkIdx = 0; chunkIdx < targetChunks.length; chunkIdx++) {
       const currentChunk = targetChunks[chunkIdx];
@@ -2500,16 +2623,21 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
         if (!breakerOk()) {
           logger.error('[GROUPED-FORWARD] Circuit breaker aktif, kampanya durduruluyor');
           addActivityLog('error', `🚨 Güvenlik durdurma: ${breaker.reason}`);
+          addJobLog('error', `Circuit breaker aktif: ${breaker.reason}`);
           
-          return res.json({
+          const stopResult = {
             success: false,
             error: `Circuit breaker aktif: ${breaker.reason}`,
             sentToFirst: firstTarget.name,
             totalVideos: videoUrls.length,
             totalTargets: unifiedTargets.length,
             forwardedTo: forwardedCount,
-            failed: totalFailed
-          });
+            failed: totalFailed,
+            stopped: true
+          };
+          
+          finishJob('stopped', stopResult);
+          return; // 202 zaten gönderildi, res kullanma
         }
 
         logger.info(`[FORWARD] ${forwardedCount + 1}/${remainingTargets.length}: ${target.name}`);
@@ -2551,9 +2679,11 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
           // Ban riski varsa hemen dur (chunk break'le birlikte)
           if (breaker.open) {
             logger.error('[GROUPED-FORWARD] Ban riski tespit edildi, tüm kampanya durduruluyor');
+            addJobLog('error', `Ban riski: ${breaker.reason}`);
             
             clearAllCache();
-            return res.json({
+            
+            const stopResult = {
               success: false,
               error: `Ban riski: ${breaker.reason}`,
               sentToFirst: firstTarget.name,
@@ -2562,16 +2692,24 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
               forwardedTo: forwardedCount,
               failed: totalFailed,
               stopped: true
-            });
+            };
+            
+            finishJob('stopped', stopResult);
+            return; // 202 zaten gönderildi, res kullanma
           }
         }
       }
 
-      // Chunk tamamlandı - cooldown
+      // Chunk tamamlandı - progress güncelle
+      const progressPercent = Math.round(((chunkIdx + 1) / targetChunks.length) * 90) + 10; // 10-100%
+      updateJobProgress(progressPercent);
+      
+      // Chunk cooldown
       if (chunkIdx < targetChunks.length - 1) { // Son chunk değilse
-        const cooldownTime = jitter(BASE_BURST_COOLDOWN, 0.2); // 60s ±20% = 48-72s
+        const cooldownTime = jitter(BASE_BURST_COOLDOWN, 0.2); // 105s ±20% = 84-126s
         logger.info(`[CHUNK ${chunkIdx + 1}] Tamamlandı, ${Math.round(cooldownTime / 1000)}s cooldown...`);
         addActivityLog('info', `✅ ${currentChunk.length} hedef tamamlandı, ${Math.round(cooldownTime / 1000)}s bekleniyor...`);
+        addJobLog('info', `Chunk ${chunkIdx + 1}/${targetChunks.length} tamamlandı, cooldown: ${Math.round(cooldownTime / 1000)}s`);
         await delay(cooldownTime);
       }
     }
@@ -2587,9 +2725,15 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     const finalStatus = {
       requestId,
       success: true,
-      mode: 'baileys-forward-v2',
-      features: ['shuffle', 'jitter', 'circuit-breaker', 'chunk-system', 'safe-send'],
+      mode: 'baileys-forward-v3-optimized',
+      features: ['shuffle', 'jitter', 'circuit-breaker', 'chunk-system', 'safe-send', 'caption-variation', 'random-first-contact'],
+      config: {
+        chunkSize: CHUNK_SIZE,
+        forwardDelay: FORWARD_DELAY,
+        burstCooldown: FORWARD_BURST_COOLDOWN
+      },
       sentToFirst: firstTarget.name,
+      firstTargetType: firstTarget.type,
       totalVideos: videoUrls.length,
       totalTargets: unifiedTargets.length,
       forwardedTo: forwardedCount,
@@ -2601,7 +2745,9 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
 
     logger.info('[GROUPED-FORWARD] Success', finalStatus);
     logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, finalStatus);
-    // Response zaten gönderildi (202 Accepted), burada sadece log
+    addJobLog('success', `Tamamlandı: ${forwardedCount}/${unifiedTargets.length - 1} forward başarılı`);
+    finishJob('completed', finalStatus);
+    updateJobProgress(100);
 
   } catch (error) {
     // Cache temizle (hata durumunda)
@@ -2618,7 +2764,12 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     
     logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, { requestId, error: error.message });
     addActivityLog('error', `❌ İşlem hatası: ${error.message}`);
-    // Response zaten gönderildi, burada sadece log
+    addJobLog('error', `Fatal error: ${error.message}`);
+    
+    finishJob('failed', { 
+      error: error.message,
+      stack: error.stack 
+    });
   }
 });
 
