@@ -2218,6 +2218,31 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
   const startTime = Date.now();
   logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, 'started');
 
+  // ============ CONNECTION CHECK (WhatsApp bağlı mı?) ============
+  if (!ready || !sock) {
+    logger.error('[GROUPED-FORWARD] ❌ WhatsApp bağlı değil, istek reddedildi');
+    return res.status(503).json({
+      success: false,
+      error: 'WhatsApp not connected',
+      message: 'QR kodu taranmamış veya bağlantı kesilmiş. Lütfen önce WhatsApp\'a bağlanın.',
+      ready: false
+    });
+  }
+
+  // ============ ASYNC RESPONSE (Timeout önleme) ============
+  // İsteği hemen kabul et, işlemi arka planda yap
+  const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  logger.info(`[GROUPED-FORWARD] Request ID: ${requestId}, async processing başlatıldı`);
+  
+  // N8n'e hemen 202 Accepted dön (timeout önleme)
+  res.status(202).json({
+    success: true,
+    message: 'Request accepted, processing in background',
+    requestId,
+    ready: true,
+    note: 'Video gönderimi arka planda devam ediyor. İlerlemeyi activity log\'dan takip edebilirsiniz.'
+  });
+
   // ============ HELPER FUNCTIONS (Anti-Ban & Natural Behavior) ============
   
   // Jitter: Rastgele varyasyon ekler (±30% default)
@@ -2537,7 +2562,8 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     const processingTime = Date.now() - startTime;
     const processingMinutes = Math.round(processingTime / 1000 / 60);
     
-    const responseData = {
+    const finalStatus = {
+      requestId,
       success: true,
       mode: 'baileys-forward-v2',
       features: ['shuffle', 'jitter', 'circuit-breaker', 'chunk-system', 'safe-send'],
@@ -2551,9 +2577,9 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
       circuitBreakerStatus: breaker.open ? `⚠️ AÇIK (${breaker.reason})` : '✅ Kapalı'
     };
 
-    logger.info('[GROUPED-FORWARD] Success', responseData);
-    logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, responseData);
-    return res.json(responseData);
+    logger.info('[GROUPED-FORWARD] Success', finalStatus);
+    logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, finalStatus);
+    // Response zaten gönderildi (202 Accepted), burada sadece log
 
   } catch (error) {
     // Cache temizle (hata durumunda)
@@ -2562,16 +2588,15 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     } catch {}
     
     logger.error("[GROUPED-FORWARD] Error", {
+      requestId,
       error: error.message,
       stack: error.stack,
       videoUrls: videoUrls?.length
     });
     
-    logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, { error: error.message });
-    return res.status(500).json({ 
-      error: "Video işlem hatası: " + error.message,
-      success: false
-    });
+    logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, { requestId, error: error.message });
+    addActivityLog('error', `❌ İşlem hatası: ${error.message}`);
+    // Response zaten gönderildi, burada sadece log
   }
 });
 
