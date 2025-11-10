@@ -2341,23 +2341,45 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
   const BASE_BURST_COOLDOWN = FORWARD_BURST_COOLDOWN || 60000; // 60s default
 
   const {
-    videoUrls,
-    captions,  // Array olarak handle et
+    videoUrls: rawVideoUrls,
+    videoUrl: singleVideoUrl,  // ✅ TEKİL FORMAT DESTEĞİ (videoUrl)
+    captions: rawCaptions,
+    caption: singleCaption,
     country,
     language,
   } = req.body || {};
+
+  // ============ VIDEO URL NORMALIZE (videoUrl veya videoUrls) ============
+  let videoUrls = [];
+  if (Array.isArray(rawVideoUrls) && rawVideoUrls.length > 0) {
+    videoUrls = rawVideoUrls;  // ✅ videoUrls: ["url1", "url2"]
+  } else if (typeof singleVideoUrl === 'string' && singleVideoUrl.length > 0) {
+    videoUrls = [singleVideoUrl];  // ✅ videoUrl: "url" → ["url"]
+  }
+
+  // ============ CAPTION NORMALIZE (caption veya captions) ============
+  let captions = [];
+  if (Array.isArray(rawCaptions)) {
+    captions = rawCaptions;  // ✅ captions: ["cap1", "cap2"]
+  } else if (typeof singleCaption === 'string' && singleCaption.length > 0) {
+    // Tek caption verildiyse tüm videoUrls için aynı caption kullan
+    captions = videoUrls.map(() => singleCaption);  // ✅ caption: "cap" → ["cap", "cap"]
+  } else {
+    captions = [];
+  }
 
   logger.info('[GROUPED-FORWARD] Request received', {
     videoCount: videoUrls?.length,
     country,
     language,
-    ready
+    ready,
+    format: rawVideoUrls ? 'videoUrls (array)' : singleVideoUrl ? 'videoUrl (string)' : 'unknown'
   });
 
-  if (!videoUrls || !Array.isArray(videoUrls) || videoUrls.length === 0) {
-    logger.error('[GROUPED-FORWARD] Missing videoUrls array');
-    logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, { error: 'videoUrls array gerekli' });
-    return res.status(400).json({ error: "videoUrls array gerekli." });
+  if (!videoUrls || videoUrls.length === 0) {
+    logger.error('[GROUPED-FORWARD] Missing video URL(s)');
+    logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, { error: 'videoUrls veya videoUrl gerekli' });
+    return res.status(400).json({ error: "videoUrls (array) veya videoUrl (string) gerekli." });
   }
 
   if (!ready || !sock) {
