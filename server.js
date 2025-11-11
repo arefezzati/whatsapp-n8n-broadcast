@@ -50,18 +50,71 @@ const ACCESS_TOKEN = process.env.ACCESS_TOKEN || 'default-secure-token-change-me
 
 console.log('[AUTH] Access token configured:', ACCESS_TOKEN !== 'default-secure-token-change-me' ? '✅ Custom token' : '⚠️  Using default token');
 
+// Session store (basit in-memory)
+const activeSessions = new Map();
+const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 saat
+
+// Session temizleme (her 1 saatte bir)
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, data] of activeSessions.entries()) {
+    if (now > data.expiresAt) {
+      activeSessions.delete(sessionId);
+      console.log('[AUTH] Expired session removed:', sessionId);
+    }
+  }
+}, 60 * 60 * 1000);
+
 // Token doğrulama middleware
 function requireAuth(req, res, next) {
   // API endpoint'leri için token kontrolü yapma (harici erişim için)
-  if (req.path.startsWith('/api/')) {
+  if (req.path.startsWith('/api/') || req.path === '/status' || req.path === '/qr') {
     return next();
   }
 
-  // Query parameter'den token kontrol et (?token=xxx)
+  // CSS/JS/Assets için token kontrolü yapma
+  if (req.path.startsWith('/assets/') || req.path.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg)$/)) {
+    return next();
+  }
+
+  // Cookie'den session ID al
+  const cookies = req.headers.cookie?.split(';').reduce((acc, cookie) => {
+    const [key, value] = cookie.trim().split('=');
+    acc[key] = value;
+    return acc;
+  }, {}) || {};
+  
+  const sessionId = cookies.whatsapp_session;
+
+  // Mevcut session var mı kontrol et
+  if (sessionId && activeSessions.has(sessionId)) {
+    const session = activeSessions.get(sessionId);
+    if (Date.now() < session.expiresAt) {
+      // Session geçerli, süreyi uzat
+      session.expiresAt = Date.now() + SESSION_DURATION;
+      return next();
+    } else {
+      // Session süresi dolmuş
+      activeSessions.delete(sessionId);
+    }
+  }
+
+  // Query parameter'den token kontrol et (ilk giriş için)
   const queryToken = req.query.token;
 
-  // Token doğrula
   if (queryToken === ACCESS_TOKEN) {
+    // Token geçerli, yeni session oluştur
+    const newSessionId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    activeSessions.set(newSessionId, {
+      createdAt: Date.now(),
+      expiresAt: Date.now() + SESSION_DURATION,
+      ip: req.ip
+    });
+
+    // Session cookie set et
+    res.setHeader('Set-Cookie', `whatsapp_session=${newSessionId}; Path=/; HttpOnly; Max-Age=${SESSION_DURATION / 1000}; SameSite=Strict${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+    
+    console.log('[AUTH] New session created:', newSessionId);
     return next();
   }
 
@@ -2957,6 +3010,19 @@ app.post("/logout", async (req, res) => {
   try {
     console.log("[LOGOUT] WhatsApp oturumu kapatılıyor... (Session korunacak)");
     logger.info('[LOGOUT] Starting logout', { ready, hasSock: !!sock });
+
+    // Auth session'ı da temizle
+    const cookies = req.headers.cookie?.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
+    }, {}) || {};
+    
+    const sessionId = cookies.whatsapp_session;
+    if (sessionId && activeSessions.has(sessionId)) {
+      activeSessions.delete(sessionId);
+      console.log('[AUTH] Session removed on logout:', sessionId);
+    }
 
     if (sock) {
       await sock.logout();
