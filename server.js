@@ -44,6 +44,56 @@ initializePaths();
 const diskInfo = getDiskInfo();
 console.log('[DISK] Persistent storage configuration:', diskInfo);
 
+// ==== ACCESS TOKEN CONFIGURATION ====
+// Environment variable'dan token al, yoksa varsayılan kullan
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN || 'default-secure-token-change-me';
+
+console.log('[AUTH] Access token configured:', ACCESS_TOKEN !== 'default-secure-token-change-me' ? '✅ Custom token' : '⚠️  Using default token');
+
+// Token doğrulama middleware
+function requireAuth(req, res, next) {
+  // API endpoint'leri için token kontrolü yapma (harici erişim için)
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+
+  // Query parameter'den token kontrol et (?token=xxx)
+  const queryToken = req.query.token;
+
+  // Token doğrula
+  if (queryToken === ACCESS_TOKEN) {
+    return next();
+  }
+
+  // Token geçersiz veya yok
+  res.status(403).send(`
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Erişim Engellendi</title>
+      <style>
+        body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+        .card{background:#111827;padding:40px;border-radius:16px;text-align:center;max-width:400px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+        h1{color:#ef4444;font-size:48px;margin:0 0 16px}
+        p{color:#9ca3af;line-height:1.6;margin:0 0 24px}
+        .code{background:#1f2937;padding:12px;border-radius:8px;font-family:monospace;color:#fbbf24;margin:20px 0}
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h1>🔒</h1>
+        <h2 style="color:#ef4444;margin:0 0 16px">Erişim Engellendi</h2>
+        <p>Bu sayfaya erişim için geçerli bir yetkilendirme gereklidir.</p>
+        <div class="code">403 Forbidden</div>
+        <p style="font-size:14px">Yetkili erişim için web sitenizden bağlantıyı kullanın.</p>
+      </div>
+    </body>
+    </html>
+  `);
+}
+
 // ==== Winston Logger Configuration ====
 // NOT: Web ortamında (Cloud/Docker) dosya yazma sınırlaması olabilir
 // Bu yüzden FILE_LOGS environment variable ile kontrol ediyoruz
@@ -265,6 +315,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Cookie parser artık gerekli değil - sadece query token kullanıyoruz
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
 app.use(express.raw({ limit: "100mb", type: 'application/octet-stream' }));
@@ -1395,7 +1446,7 @@ app.use((req, res, next) => {
 });
 
 // ==== Rotalar ====
-app.get("/", (req, res) => {
+app.get("/", requireAuth, (req, res) => {
   res.set("Content-Type", "text/html; charset=utf-8");
   res.send(HTML_PAGE);
 });
@@ -1590,7 +1641,7 @@ app.get("/api/templates/:language", (req, res) => {
 });
 
 // Kişi yönetim sayfası
-app.get("/contacts", (req, res) => {
+app.get("/contacts", requireAuth, (req, res) => {
   // CSP header ekle - blob: URL'leri ve media'ya izin ver
   res.setHeader(
     'Content-Security-Policy',
@@ -1637,7 +1688,7 @@ app.get("/contacts", (req, res) => {
 });
 
 // Grup yönetimi sayfası
-app.get("/groups", (req, res) => {
+app.get("/groups", requireAuth, (req, res) => {
   const groupsPath = path.join(process.cwd(), "groups.html");
   if (fs.existsSync(groupsPath)) {
     let html = fs.readFileSync(groupsPath, 'utf-8');
@@ -1678,7 +1729,7 @@ app.get("/groups", (req, res) => {
 });
 
 // Sistem monitör sayfası
-app.get("/monitor", (req, res) => {
+app.get("/monitor", requireAuth, (req, res) => {
   const monitorPath = path.join(process.cwd(), "monitor.html");
   if (fs.existsSync(monitorPath)) {
     let html = fs.readFileSync(monitorPath, 'utf-8');
@@ -1719,7 +1770,7 @@ app.get("/monitor", (req, res) => {
 });
 
 // Disk durumu sayfası
-app.get("/disk-status", (req, res) => {
+app.get("/disk-status", requireAuth, (req, res) => {
   const diskStatusPath = path.join(process.cwd(), "disk-status.html");
   if (fs.existsSync(diskStatusPath)) {
     res.sendFile(diskStatusPath);
