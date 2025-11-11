@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disk Durumu - WhatsApp Otomation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .status-card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-item .label {
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .info-item .value {
+            color: #333;
+            font-size: 16px;
+            word-break: break-all;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-badge.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .path-check {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .path-check .icon {
+            font-size: 24px;
+            margin-right: 15px;
+        }
+
+        .path-check .path-info {
+            flex: 1;
+        }
+
+        .path-check .path-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .path-check .path-value {
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .summary-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .summary-item .number {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .summary-item .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .refresh-btn {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 211, 102, 0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 18px;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .file-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .timestamp {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💾 Disk Durumu</h1>
+            <p class="subtitle">Render.com Persistent Disk Monitoring</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <div>⏳ Disk bilgileri yükleniyor...</div>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- Environment Info -->
+            <div class="status-card">
+                <h2>🔧 Ortam Bilgileri</h2>
+                <div class="info-grid" id="envInfo"></div>
+            </div>
+
+            <!-- Path Status -->
+            <div class="status-card">
+                <h2>📂 Dosya Yolları</h2>
+                <div id="pathStatus"></div>
+            </div>
+
+            <!-- File Details -->
+            <div class="status-card">
+                <h2>📊 Detaylı Bilgiler</h2>
+                <div id="fileDetails"></div>
+            </div>
+
+            <!-- Summary -->
+            <div class="status-card">
+                <h2>📈 Özet</h2>
+                <div class="summary-grid" id="summary"></div>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="refresh-btn" onclick="loadDiskInfo()">🔄 Yenile</button>
+            </div>
+
+            <div class="timestamp" id="timestamp"></div>
+        </div>
+
+        <div id="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function loadDiskInfo() {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            const error = document.getElementById('error');
+
+            loading.style.display = 'block';
+            content.style.display = 'none';
+            error.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/disk-info');
+                const data = await response.json();
+
+                if (data.success) {
+                    renderDiskInfo(data);
+                    content.style.display = 'block';
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (err) {
+                error.innerHTML = `<div class="error-message">❌ Hata: ${err.message}</div>`;
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function renderDiskInfo(data) {
+            // Environment Info
+            const envInfo = document.getElementById('envInfo');
+            envInfo.innerHTML = `
+                <div class="info-item">
+                    <div class="label">NODE_ENV</div>
+                    <div class="value">${data.environment.NODE_ENV || 'development'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Persistent Disk Kullanılıyor</div>
+                    <div class="value">${data.environment.isPersistentDisk ? '✅ Evet' : '❌ Hayır'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Disk Mount Path</div>
+                    <div class="value">${data.environment.DISK_MOUNT_PATH || 'Ayarlanmamış'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Base Path</div>
+                    <div class="value">${data.config.basePath}</div>
+                </div>
+            `;
+
+            // Path Status
+            const pathStatus = document.getElementById('pathStatus');
+            const paths = [
+                { label: 'Auth Directory', key: 'authDir', path: data.fileDetails.authDir?.path },
+                { label: 'Contacts File', key: 'contactsFile', path: data.fileDetails.contactsFile?.path },
+                { label: 'Groups File', key: 'groupsFile', path: data.fileDetails.groupsFile?.path },
+                { label: 'Tmp Videos Dir', key: 'tmpVideosDir', path: data.fileDetails.tmpVideosDir?.path },
+                { label: 'Countries File', key: 'countriesFile', path: data.config.basePath + '/countries.json' }
+            ];
+
+            pathStatus.innerHTML = paths.map(item => `
+                <div class="path-check">
+                    <div class="icon">${data.pathStatus[item.key] ? '✅' : '❌'}</div>
+                    <div class="path-info">
+                        <div class="path-label">${item.label}</div>
+                        <div class="path-value">${item.path || 'N/A'}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            // File Details
+            const fileDetails = document.getElementById('fileDetails');
+            let detailsHtml = '';
+
+            if (data.fileDetails.authDir) {
+                detailsHtml += `
+                    <div class="info-item">
+                        <div class="label">Auth Directory</div>
+                        <div class="value">
+                            ${data.fileDetails.authDir.count} dosya
+                            ${data.fileDetails.authDir.hasCredsFile ? '✅ creds.json mevcut' : '❌ creds.json yok'}
+                        </div>
+                        <div class="file-list">
+                            ${data.fileDetails.authDir.files.join('<br>')}
+                            ${data.fileDetails.authDir.count > 5 ? '<br>...' : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (data.fileDetails.contactsFile) {
+                detailsHtml += `
+                    <div class="info-item">
+                        <div class="label">Contacts File</div>
+                        <div class="value">
+                            ${data.fileDetails.contactsFile.contactCount} kişi
+                            (${data.fileDetails.contactsFile.size})
+                        </div>
+                        <div class="path-value">Son güncelleme: ${new Date(data.fileDetails.contactsFile.lastModified).toLocaleString('tr-TR')}</div>
+                    </div>
+                `;
+            }
+
+            if (data.fileDetails.groupsFile) {
+                detailsHtml += `
+                    <div class="info-item">
+                        <div class="label">Groups File</div>
+                        <div class="value">
+                            ${data.fileDetails.groupsFile.groupCount} grup
+                            (${data.fileDetails.groupsFile.size})
+                        </div>
+                        <div class="path-value">Son güncelleme: ${new Date(data.fileDetails.groupsFile.lastModified).toLocaleString('tr-TR')}</div>
+                    </div>
+                `;
+            }
+
+            if (data.fileDetails.tmpVideosDir) {
+                detailsHtml += `
+                    <div class="info-item">
+                        <div class="label">Tmp Videos Directory</div>
+                        <div class="value">
+                            ${data.fileDetails.tmpVideosDir.count} dosya
+                            (${data.fileDetails.tmpVideosDir.totalSize})
+                        </div>
+                        ${data.fileDetails.tmpVideosDir.files.length > 0 ? `
+                            <div class="file-list">
+                                ${data.fileDetails.tmpVideosDir.files.join('<br>')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            fileDetails.innerHTML = `<div class="info-grid">${detailsHtml}</div>`;
+
+            // Summary
+            const summary = document.getElementById('summary');
+            summary.innerHTML = `
+                <div class="summary-item">
+                    <div class="number">${data.summary.authFilesCount}</div>
+                    <div class="label">Auth Dosyaları</div>
+                </div>
+                <div class="summary-item">
+                    <div class="number">${data.summary.contactsCount}</div>
+                    <div class="label">Toplam Kişi</div>
+                </div>
+                <div class="summary-item">
+                    <div class="number">${data.summary.groupsCount}</div>
+                    <div class="label">Toplam Grup</div>
+                </div>
+                <div class="summary-item">
+                    <div class="number">${data.summary.tmpVideosCount}</div>
+                    <div class="label">Geçici Video</div>
+                </div>
+            `;
+
+            // Timestamp
+            const timestamp = document.getElementById('timestamp');
+            timestamp.textContent = `Son güncelleme: ${new Date(data.timestamp).toLocaleString('tr-TR')}`;
+        }
+
+        // Auto-load on page load
+        loadDiskInfo();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadDiskInfo, 30000);
+    </script>
+</body>
+</html>

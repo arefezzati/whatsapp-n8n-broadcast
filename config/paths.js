@@ -39,9 +39,10 @@ export const PATHS = {
 };
 
 /**
- * Gerekli klasörleri oluştur
+ * Gerekli klasörleri ve dosyaları oluştur
  */
 export function initializePaths() {
+  // 1. Klasörleri oluştur
   const directories = [
     PATHS.AUTH_DIR,
     PATHS.TMP_VIDEOS_DIR,
@@ -59,12 +60,50 @@ export function initializePaths() {
     }
   });
 
+  // 2. JSON dosyalarını oluştur (yoksa)
+  initializeJsonFiles();
+
   console.log(`[DISK] Persistent storage ${USE_PERSISTENT_DISK ? 'ACTIVE' : 'DISABLED'}`);
   console.log(`[DISK] Base path: ${BASE_PATH}`);
   console.log(`[DISK] Auth directory: ${PATHS.AUTH_DIR}`);
   console.log(`[DISK] Contacts file: ${PATHS.CONTACTS_FILE}`);
   console.log(`[DISK] Groups file: ${PATHS.GROUPS_FILE}`);
   console.log(`[DISK] Tmp videos: ${PATHS.TMP_VIDEOS_DIR}`);
+}
+
+/**
+ * JSON dosyalarını başlat (GitHub'dan çekilen dosyaları diske kopyala)
+ */
+function initializeJsonFiles() {
+  const filesToCopy = [
+    { source: 'contacts.json', target: PATHS.CONTACTS_FILE, description: 'Contacts' },
+    { source: 'groups.json', target: PATHS.GROUPS_FILE, description: 'Groups' },
+    { source: 'countries.json', target: PATHS.COUNTRIES_FILE, description: 'Countries' }
+  ];
+
+  filesToCopy.forEach(({ source, target, description }) => {
+    // Hedef dosya zaten varsa atla
+    if (fs.existsSync(target)) {
+      console.log(`[DISK] ⏭️  ${description} dosyası zaten mevcut: ${target}`);
+      return;
+    }
+
+    // Kaynak dosyayı proje root'undan bul
+    const sourceFile = path.join(process.cwd(), source);
+    
+    try {
+      if (fs.existsSync(sourceFile)) {
+        // GitHub'dan çekilen dosyayı olduğu gibi diske kopyala
+        const fileData = fs.readFileSync(sourceFile, 'utf8');
+        fs.writeFileSync(target, fileData, 'utf8');
+        console.log(`[DISK] ✅ ${description} dosyası diske kopyalandı: ${sourceFile} → ${target}`);
+      } else {
+        console.warn(`[DISK] ⚠️  Kaynak dosya bulunamadı: ${sourceFile}`);
+      }
+    } catch (error) {
+      console.error(`[DISK] ❌ ${description} dosyası kopyalanamadı:`, error.message);
+    }
+  });
 }
 
 /**

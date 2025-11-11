@@ -1177,6 +1177,7 @@ const HTML_PAGE = `<!doctype html>
       <a href="./" class="nav-link active">🏠 Ana Sayfa</a>
       <a href="contacts" class="nav-link">👥 Kişiler</a>
       <a href="monitor" class="nav-link">📊 Monitör</a>
+      <a href="disk-status" class="nav-link">💾 Disk Durumu</a>
       <a href="#" class="nav-link" onclick="openStatusModal()">⚡ Durum</a>
     </div>
   </nav>
@@ -1692,6 +1693,16 @@ app.get("/monitor", (req, res) => {
     res.send(html);
   } else {
     res.status(404).send("Monitör sayfası bulunamadı.");
+  }
+});
+
+// Disk durumu sayfası
+app.get("/disk-status", (req, res) => {
+  const diskStatusPath = path.join(process.cwd(), "disk-status.html");
+  if (fs.existsSync(diskStatusPath)) {
+    res.sendFile(diskStatusPath);
+  } else {
+    res.status(404).send("Disk durumu sayfası bulunamadı.");
   }
 });
 
@@ -2990,7 +3001,7 @@ app.get("/api/disk-info", (req, res) => {
   try {
     const diskConfig = getDiskInfo();
     
-    // Check if paths exist
+    // Check if paths exist and get detailed info
     const pathStatus = {
       authDir: checkPathExists(PATHS.AUTH_DIR),
       contactsFile: checkPathExists(PATHS.CONTACTS_FILE),
@@ -2999,24 +3010,92 @@ app.get("/api/disk-info", (req, res) => {
       tmpVideosDir: checkPathExists(PATHS.TMP_VIDEOS_DIR)
     };
 
-    // Count files in directories
-    const authFilesCount = pathStatus.authDir ? fs.readdirSync(PATHS.AUTH_DIR).length : 0;
-    const tmpVideosCount = pathStatus.tmpVideosDir ? fs.readdirSync(PATHS.TMP_VIDEOS_DIR).length : 0;
+    // Get detailed file information
+    const fileDetails = {};
+    
+    // Auth directory files
+    if (pathStatus.authDir) {
+      const authFiles = fs.readdirSync(PATHS.AUTH_DIR);
+      fileDetails.authDir = {
+        path: PATHS.AUTH_DIR,
+        count: authFiles.length,
+        files: authFiles.slice(0, 5), // Show first 5 files
+        hasCredsFile: authFiles.includes('creds.json'),
+        lastModified: authFiles.length > 0 ? 
+          fs.statSync(path.join(PATHS.AUTH_DIR, authFiles[0])).mtime : null
+      };
+    }
+
+    // Contacts file
+    if (pathStatus.contactsFile) {
+      const contactsStats = fs.statSync(PATHS.CONTACTS_FILE);
+      const contactsData = JSON.parse(fs.readFileSync(PATHS.CONTACTS_FILE, 'utf8'));
+      fileDetails.contactsFile = {
+        path: PATHS.CONTACTS_FILE,
+        size: `${(contactsStats.size / 1024).toFixed(2)} KB`,
+        contactCount: contactsData.contacts?.length || 0,
+        lastModified: contactsStats.mtime,
+        lastUpdated: contactsData.lastUpdated
+      };
+    }
+
+    // Groups file
+    if (pathStatus.groupsFile) {
+      const groupsStats = fs.statSync(PATHS.GROUPS_FILE);
+      const groupsData = JSON.parse(fs.readFileSync(PATHS.GROUPS_FILE, 'utf8'));
+      fileDetails.groupsFile = {
+        path: PATHS.GROUPS_FILE,
+        size: `${(groupsStats.size / 1024).toFixed(2)} KB`,
+        groupCount: groupsData.groups?.length || 0,
+        lastModified: groupsStats.mtime,
+        lastUpdated: groupsData.lastUpdated
+      };
+    }
+
+    // Tmp videos directory
+    if (pathStatus.tmpVideosDir) {
+      const tmpFiles = fs.readdirSync(PATHS.TMP_VIDEOS_DIR);
+      const totalSize = tmpFiles.reduce((sum, file) => {
+        const filePath = path.join(PATHS.TMP_VIDEOS_DIR, file);
+        return sum + fs.statSync(filePath).size;
+      }, 0);
+      fileDetails.tmpVideosDir = {
+        path: PATHS.TMP_VIDEOS_DIR,
+        count: tmpFiles.length,
+        totalSize: `${(totalSize / 1024 / 1024).toFixed(2)} MB`,
+        files: tmpFiles
+      };
+    }
+
+    // Environment info
+    const envInfo = {
+      NODE_ENV: process.env.NODE_ENV,
+      USE_DISK: process.env.USE_DISK,
+      DISK_MOUNT_PATH: process.env.DISK_MOUNT_PATH,
+      isPersistentDisk: diskConfig.usingPersistentDisk
+    };
 
     res.json({
       success: true,
+      timestamp: new Date().toISOString(),
       config: diskConfig,
+      environment: envInfo,
       pathStatus,
-      fileCount: {
-        authFiles: authFilesCount,
-        tmpVideos: tmpVideosCount
+      fileDetails,
+      summary: {
+        authFilesCount: fileDetails.authDir?.count || 0,
+        contactsCount: fileDetails.contactsFile?.contactCount || 0,
+        groupsCount: fileDetails.groupsFile?.groupCount || 0,
+        tmpVideosCount: fileDetails.tmpVideosDir?.count || 0,
+        allPathsOk: Object.values(pathStatus).every(status => status === true)
       }
     });
   } catch (error) {
     console.error('[DISK-INFO] Error:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
