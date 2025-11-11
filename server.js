@@ -32,10 +32,17 @@ import {
   Browsers
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
+// Persistent disk configuration
+import { PATHS, initializePaths, getDiskInfo, checkPathExists } from './config/paths.js';
 // ngrok'u dinamik import edeceğiz; paketlenmiş ortamlarda eksikse crash olmasın
 
 const app = express();
 const streamPipeline = promisify(pipeline);
+
+// ==== Initialize Persistent Disk Paths ====
+initializePaths();
+const diskInfo = getDiskInfo();
+console.log('[DISK] Persistent storage configuration:', diskInfo);
 
 // ==== Winston Logger Configuration ====
 // NOT: Web ortamında (Cloud/Docker) dosya yazma sınırlaması olabilir
@@ -196,13 +203,13 @@ const PORT = Number(process.env.PORT) || 3001;
 const BASE_PATH = process.env.BASE_PATH || '';
 // Cross-platform temp directory
 const TMP_DIR = process.env.TMPDIR || os.tmpdir();
-// Gallery upload tmp folder inside repository (persistent between runs)
-const GALLERY_TMP = path.join(process.cwd(), 'whatsapp_web_js', 'tmp_videos');
+// Gallery upload tmp folder - PERSISTENT DISK
+const GALLERY_TMP = PATHS.TMP_VIDEOS_DIR;
 if (!fs.existsSync(GALLERY_TMP)) {
   fs.mkdirSync(GALLERY_TMP, { recursive: true });
 }
-// Baileys auth directory
-const AUTH_DIR = './auth_info_baileys';
+// Baileys auth directory - PERSISTENT DISK
+const AUTH_DIR = PATHS.AUTH_DIR;
 if (!fs.existsSync(AUTH_DIR)) {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 }
@@ -215,9 +222,14 @@ const FORWARD_BURST_COOLDOWN = parseInt(process.env.FORWARD_BURST_COOLDOWN || '1
 // Chunk parametreleri (Anti-ban için optimize edilmiş)
 const CHUNK_SIZE = parseInt(process.env.CHUNK_SIZE || '12', 10);                   // 12 hedef/chunk (10-15 önerilen)
 
+// Seed rotation parametresi (optional complexity - advanced anti-ban)
+const SEED_INTERVAL = parseInt(process.env.SEED_INTERVAL || '0', 10);              // 0=disabled, 220=her 220 hedefte yeni seed upload
+
+// Job logs ring buffer (RAM leak önleme)
+const MAX_JOB_LOGS = parseInt(process.env.MAX_JOB_LOGS || '1000', 10);             // Max 1000 log/job
+
 // Job tracking store (202 async response için)
 const jobStore = new Map(); // { requestId: { status, progress, result, startTime, logs } }
-
 // ngrok public URL (başlatılınca atanacak)
 let TUNNEL_URL = null;
 
@@ -302,9 +314,10 @@ const galleryUpload = multer({
 });
 
 // ==== Kişi yönetimi için helper fonksiyonlar ====
-const CONTACTS_FILE = path.join(process.cwd(), "contacts.json");
-const COUNTRIES_FILE = path.join(process.cwd(), "countries.json");
-const GROUPS_FILE = path.join(process.cwd(), "groups.json");
+// PERSISTENT DISK - JSON dosyaları disk'e yazılacak
+const CONTACTS_FILE = PATHS.CONTACTS_FILE;
+const COUNTRIES_FILE = PATHS.COUNTRIES_FILE;
+const GROUPS_FILE = PATHS.GROUPS_FILE;
 
 function loadCountries() {
   try {
@@ -2286,7 +2299,7 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     note: 'Video gönderimi arka planda devam ediyor. /api/job/:requestId endpoint\'inden durumu sorgulayabilirsiniz.'
   });
 
-  // Job helper: Log ekle
+  // Job helper: Log ekle (ring buffer - RAM leak önleme)
   const addJobLog = (level, message) => {
     const job = jobStore.get(requestId);
     if (job) {
@@ -2295,6 +2308,10 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
         message, 
         timestamp: new Date().toISOString() 
       });
+      // Ring buffer: Max 1000 log tutulsun
+      if (job.logs.length > MAX_JOB_LOGS) {
+        job.logs.shift(); // En eskiyi sil
+      }
       jobStore.set(requestId, job);
     }
   };
@@ -2322,12 +2339,20 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
 
   // ============ HELPER FUNCTIONS (Anti-Ban & Natural Behavior) ============
   
+  // Socket alive check: Bağlantı kopuksa işlem yapma
+  const isSockAlive = () => {
+    if (!sock || !ready) {
+      logger.error('[SOCK-CHECK] Socket not alive (disconnected)');
+      return false;
+    }
+    return true;
+  };
+  
   // Jitter: Rastgele varyasyon ekler (±30% default)
   const jitter = (ms, pct = 0.3) => {
     const delta = ms * pct;
     return ms + Math.floor((Math.random() * 2 - 1) * delta);
   };
-
   // Shuffle: Diziyi rastgele karıştırır (doğal sıralama için)
   const shuffleInPlace = (arr) => {
     for (let i = arr.length - 1; i > 0; i--) {
@@ -2415,6 +2440,12 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
   const addCaptionVariation = (caption, targetType) => {
     if (!caption || caption.trim() === '') return '';
     
+    // WhatsApp caption limit: 1024 karakter (güvenli limit: 980)
+    const CAPTION_MAX = 980;
+    let finalCaption = caption.length > CAPTION_MAX 
+      ? caption.substring(0, CAPTION_MAX) + '...' 
+      : caption;
+    
     // Grup için emoji seti (profesyonel)
     const groupEmojis = ['', ' ✨', ' 📢', ' 💼', ' 🔔'];
     
@@ -2424,7 +2455,7 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     const emojiSet = targetType === 'group' ? groupEmojis : contactEmojis;
     const randomEmoji = emojiSet[Math.floor(Math.random() * emojiSet.length)];
     
-    return caption + randomEmoji;
+    return finalCaption + randomEmoji;
   };
 
   // ========================================================================
@@ -2529,6 +2560,7 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     // 2) İLK HEDEFE NORMAL SEND - RASTGELE KİŞİ SEÇ (Anti-ban)
     let sentMessages = [];
     let firstTarget;
+    let remainingTargets; // ← Shuffle'ı korumak için burada tanımla
     
     // İlk hedef: Kişilerden rastgele seç (grup değil)
     const contactTargets = unifiedTargets.filter(t => t.type === 'contact');
@@ -2541,20 +2573,30 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
       
       // Kalan hedefler: diğer kişiler + gruplar (rastgele karışık)
       const remainingContacts = contactTargets.filter((_, idx) => idx !== randomIndex);
-      const allRemainingTargets = [...remainingContacts, ...groupTargets];
-      shuffleInPlace(allRemainingTargets);
+      remainingTargets = [...remainingContacts, ...groupTargets];
+      shuffleInPlace(remainingTargets); // ← Bu shuffle KORUNACAK (bug fix)
       
       logger.info(`[GROUPED-FORWARD] İlk hedef (rastgele kişi): ${firstTarget.name}`);
       addJobLog('info', `İlk hedef seçildi: ${firstTarget.name} (contact)`);
     } else {
       // Kişi yoksa grup seç (fallback)
       firstTarget = unifiedTargets[0];
+      remainingTargets = unifiedTargets.slice(1);
+      shuffleInPlace(remainingTargets);
       logger.warn(`[GROUPED-FORWARD] Kişi bulunamadı, ilk hedef grup: ${firstTarget.name}`);
       addJobLog('warn', `İlk hedef grup: ${firstTarget.name} (contact yok)`);
     }
 
     logger.info(`[GROUPED-FORWARD] İlk hedef: ${firstTarget.name} (${firstTarget.type})`);
     addActivityLog('info', `İlk hedefe gönderiliyor: ${firstTarget.name}`);
+
+    // Socket bağlantısını kontrol et (disconnect durumunda devam etme)
+    if (!isSockAlive()) {
+      const errorMsg = "WhatsApp bağlantısı koptu, işlem yapılamıyor";
+      finishJob('failed', { error: errorMsg });
+      addJobLog('error', errorMsg);
+      return; // 202 zaten gönderildi
+    }
 
     for (let i = 0; i < videoUrls.length; i++) {
       const vUrl = videoUrls[i];
@@ -2568,13 +2610,14 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
       const cachedPath = await getOrCacheVideo(vUrl);
       const cacheTime = Date.now() - cacheStart;
       
-      const videoBuffer = await fs.promises.readFile(cachedPath);
+      // Stream kullan (Baileys önerisi - buffer yerine memory-efficient)
+      const videoStream = fs.createReadStream(cachedPath);
 
       const sendStart = Date.now();
       
       // safeSend kullan (ban detection + retry)
       const sentMsg = await safeSend(firstTarget.jid, {
-        video: videoBuffer,
+        video: videoStream,
         caption: cap,
         mimetype: 'video/mp4'
       });
@@ -2604,8 +2647,7 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     updateJobProgress(10); // %10 tamamlandı
 
     // 3) DİĞER HEDEFLERE FORWARD (Chunk + SafeSend sistemi)
-    // İlk hedefi çıkar + kalan hedefleri yeniden karıştır
-    const remainingTargets = unifiedTargets.filter(t => t.jid !== firstTarget.jid);
+    // remainingTargets zaten yukarıda tanımlandı ve shuffle edildi (bug fix)
     const targetChunks = chunk(remainingTargets, CHUNK_SIZE); // Environment variable'dan oku
     
     let forwardedCount = 0;
@@ -2617,6 +2659,43 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     for (let chunkIdx = 0; chunkIdx < targetChunks.length; chunkIdx++) {
       const currentChunk = targetChunks[chunkIdx];
       logger.info(`[CHUNK ${chunkIdx + 1}/${targetChunks.length}] ${currentChunk.length} hedef işleniyor...`);
+
+      // SEED ROTATION: Her N hedefte bir yeni seed upload (optional)
+      const shouldRotateSeed = SEED_INTERVAL > 0 && forwardedCount > 0 && forwardedCount % SEED_INTERVAL === 0;
+      if (shouldRotateSeed) {
+        logger.info(`[SEED-ROTATION] ${forwardedCount} hedef sonrası yeni seed upload...`);
+        addJobLog('info', `Seed rotation: ${forwardedCount} hedef sonrası yeni upload`);
+        
+        // Yeni rastgele hedef seç (contact veya group)
+        const newSeedTarget = currentChunk[0]; // Chunk'ın ilk hedefi seed olarak kullanılır
+        
+        // Yeni seed upload (videoları tekrar send et)
+        for (let i = 0; i < videoUrls.length; i++) {
+          const vUrl = videoUrls[i];
+          const baseCap = (captions && captions[i]) ? captions[i] : '';
+          const cap = addCaptionVariation(baseCap, newSeedTarget.type);
+          
+          const cachedPath = await getOrCacheVideo(vUrl);
+          const videoStream = fs.createReadStream(cachedPath);
+          
+          const seedMsg = await safeSend(newSeedTarget.jid, {
+            video: videoStream,
+            caption: cap,
+            mimetype: 'video/mp4'
+          });
+          
+          sentMessages[i] = seedMsg; // Yeni seed mesajları kaydet
+          logger.debug(`[SEED-ROTATION] Video ${i + 1} yeni seed olarak upload edildi`);
+          await delay(jitter(2000, 0.3));
+        }
+        
+        forwardedCount++; // Seed hedefi sayılır
+        addJobLog('success', `Seed rotation tamamlandı: ${newSeedTarget.name}`);
+        logger.info(`[SEED-ROTATION] Yeni seed tamamlandı: ${newSeedTarget.name}`);
+        
+        // Seed rotation sonrası chunk'tan seed hedefi çıkar
+        currentChunk.shift();
+      }
 
       for (const target of currentChunk) {
         // Circuit breaker kontrolü
@@ -2669,12 +2748,22 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
 
         } catch (forwardError) {
           totalFailed++;
+          
+          // Network hatası transient mu kontrol et (retry mantıklı olur)
+          const isTransient = forwardError.message && (
+            forwardError.message.includes('ECONNRESET') ||
+            forwardError.message.includes('ETIMEDOUT') ||
+            forwardError.message.includes('socket hang up')
+          );
+          
           logger.error('[GROUPED-FORWARD] Forward failed', {
             error: forwardError.message,
             target: target.name,
-            targetJid: target.jid
+            targetJid: target.jid,
+            isTransient
           });
           addActivityLog('error', `Forward hatası: ${target.name} - ${forwardError.message}`);
+          addJobLog('warning', `Hedef başarısız: ${target.name} (${isTransient ? 'network error' : 'unknown error'})`);
           
           // Ban riski varsa hemen dur (chunk break'le birlikte)
           if (breaker.open) {
@@ -2846,11 +2935,13 @@ app.post("/clear-session", async (req, res) => {
       logger.info('[CLEAR-SESSION] Socket logged out');
     }
 
-    // Session cache'ini temizle (Baileys AUTH_DIR)
-    const sessionPath = path.join(process.cwd(), AUTH_DIR);
+    // Session cache'ini temizle (Baileys AUTH_DIR - PERSISTENT DISK)
+    const sessionPath = AUTH_DIR; // Already using PATHS.AUTH_DIR
     let sessionDeleted = false;
     if (fs.existsSync(sessionPath)) {
       fs.rmSync(sessionPath, { recursive: true, force: true });
+      // Klasörü yeniden oluştur
+      fs.mkdirSync(sessionPath, { recursive: true });
       console.log("[CLEAR-SESSION] Session cache temizlendi:", sessionPath);
       logger.info('[CLEAR-SESSION] Session cache deleted', { sessionPath });
       sessionDeleted = true;
@@ -2890,6 +2981,42 @@ app.post("/clear-session", async (req, res) => {
     res.status(500).json({
       error: "Session temizleme sırasında hata oluştu.",
       details: error.message
+    });
+  }
+});
+
+// ==== Disk Monitoring API ====
+app.get("/api/disk-info", (req, res) => {
+  try {
+    const diskConfig = getDiskInfo();
+    
+    // Check if paths exist
+    const pathStatus = {
+      authDir: checkPathExists(PATHS.AUTH_DIR),
+      contactsFile: checkPathExists(PATHS.CONTACTS_FILE),
+      groupsFile: checkPathExists(PATHS.GROUPS_FILE),
+      countriesFile: checkPathExists(PATHS.COUNTRIES_FILE),
+      tmpVideosDir: checkPathExists(PATHS.TMP_VIDEOS_DIR)
+    };
+
+    // Count files in directories
+    const authFilesCount = pathStatus.authDir ? fs.readdirSync(PATHS.AUTH_DIR).length : 0;
+    const tmpVideosCount = pathStatus.tmpVideosDir ? fs.readdirSync(PATHS.TMP_VIDEOS_DIR).length : 0;
+
+    res.json({
+      success: true,
+      config: diskConfig,
+      pathStatus,
+      fileCount: {
+        authFiles: authFilesCount,
+        tmpVideos: tmpVideosCount
+      }
+    });
+  } catch (error) {
+    console.error('[DISK-INFO] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });
