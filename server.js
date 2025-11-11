@@ -847,8 +847,30 @@ async function connectToWhatsApp() {
         const base = isConflict ? 6000 : isStreamError ? 5000 : isUnauthorized401 ? 3000 : 5000;
         scheduleReconnect(base, isConflict ? 'conflict' : isStreamError ? 'stream-error' : isUnauthorized401 ? 'unauthorized' : 'generic');
       } else {
-        logger.info('[DISCONNECT] LoggedOut algılandı, yeniden bağlanma durduruldu.');
-        cleanupSocket('logout');
+        logger.warn('[DISCONNECT] LoggedOut algılandı, session temizleniyor ve yeni QR oluşturulacak.');
+        addActivityLog('warn', 'Session geçersiz, yeniden başlatılıyor');
+        
+        // Session dosyalarını temizle ve yeniden başlat
+        try {
+          const authFiles = fs.readdirSync(AUTH_DIR);
+          for (const file of authFiles) {
+            const filePath = path.join(AUTH_DIR, file);
+            if (fs.statSync(filePath).isFile()) {
+              fs.unlinkSync(filePath);
+            }
+          }
+          logger.info('[SESSION-CLEANUP] Session dosyaları temizlendi, yeniden bağlanılıyor...');
+          
+          // 3 saniye bekle ve yeniden bağlan
+          setTimeout(() => {
+            connectToWhatsApp().catch(err => {
+              logger.error('[BAILEYS] Yeniden bağlantı hatası:', err);
+            });
+          }, 3000);
+        } catch (cleanupError) {
+          logger.error('[SESSION-CLEANUP] Temizleme hatası:', cleanupError);
+          cleanupSocket('logout');
+        }
       }
     } else if (connection === 'open') {
       ready = true;
@@ -1278,7 +1300,7 @@ async function refresh(){
   }
 }
 refresh();
-setInterval(refresh, 3000);
+setInterval(refresh, 5000);
 
 // Modal Functions
 function openStatusModal() {
