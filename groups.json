@@ -1,33 +1,43 @@
 {
   "version": "1.0",
-  "lastUpdated": "2025-11-08T10:27:42.383Z",
+  "lastUpdated": "2025-11-01T08:44:01.635Z",
   "groups": [
     {
-      "id": "120363420304891608@g.us",
-      "name": "Byte Export",
+      "id": "120363403431627268@g.us",
+      "name": "Setrica patronlar😀",
       "participantCount": 3,
-      "isActive": true,
+      "isActive": false,
       "isGroup": true,
-      "createdAt": 1755084554,
-      "addedDate": "2025-11-08T10:27:42.368Z"
+      "createdAt": "2025-06-03T18:22:13.000Z",
+      "addedDate": "2025-11-01T08:43:47.577Z"
     },
     {
-      "id": "120363424440913839@g.us",
-      "name": "Test grup",
-      "participantCount": 4,
+      "id": "120363362057267810@g.us",
+      "name": "Laleli stüdyo gurup",
+      "participantCount": 7,
+      "isActive": false,
+      "isGroup": true,
+      "createdAt": "2024-11-11T13:17:55.000Z",
+      "addedDate": "2025-11-01T08:43:47.577Z"
+    },
+    {
+      "id": "120363422453654818@g.us",
+      "name": "Laleli ajans vıp",
+      "participantCount": 501,
       "isActive": true,
       "isGroup": true,
-      "createdAt": 1761124416,
-      "addedDate": "2025-11-08T10:27:42.368Z"
+      "createdAt": "2025-10-29T12:55:17.000Z",
+      "addedDate": "2025-11-01T08:43:47.577Z"
     }
   ],
-  "lastWhatsAppImport": "2025-11-08T10:27:42.383Z",
+  "lastWhatsAppImport": "2025-11-01T08:43:47.580Z",
   "importStats": {
-    "lastImportDate": "2025-11-08T10:27:42.383Z",
-    "whatsappTotal": 2,
-    "whatsappValidGroups": 2,
+    "lastImportDate": "2025-11-01T08:43:47.580Z",
+    "whatsappTotal": 41,
+    "whatsappGroups": 3,
+    "whatsappValidGroups": 3,
     "previousGroupCount": 0,
-    "newGroupsAdded": 2,
-    "totalAfterImport": 2
+    "newGroupsAdded": 3,
+    "totalAfterImport": 3
   }
 }
