@@ -67,8 +67,14 @@ setInterval(() => {
 
 // Token doğrulama middleware
 function requireAuth(req, res, next) {
-  // API endpoint'leri için token kontrolü yapma (harici erişim için)
-  if (req.path.startsWith('/api/') || req.path === '/status' || req.path === '/qr') {
+  // API endpoint'leri ve video gönderim endpoint'leri için token kontrolü yapma
+  if (req.path.startsWith('/api/') || 
+      req.path === '/status' || 
+      req.path === '/qr' ||
+      req.path === '/send-video' ||
+      req.path === '/send-video-batch' ||
+      req.path === '/send-video-to-contacts-grouped' ||
+      req.path === '/send-video-file') {
     return next();
   }
 
