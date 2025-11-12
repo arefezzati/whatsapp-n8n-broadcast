@@ -2755,19 +2755,27 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
       const cachedPath = await getOrCacheVideo(vUrl);
       const cacheTime = Date.now() - cacheStart;
       
-      // Stream kullan (Baileys önerisi - buffer yerine memory-efficient)
-      const videoStream = fs.createReadStream(cachedPath);
-
+      // ✅ FIX: Buffer kullan (stream ve path yerine - en güvenilir yöntem)
+      const videoBuffer = fs.readFileSync(cachedPath);
+      
       const sendStart = Date.now();
       
       // safeSend kullan (ban detection + retry)
       const sentMsg = await safeSend(firstTarget.jid, {
-        video: videoStream,
+        video: videoBuffer, // ✅ Buffer kullan
         caption: cap,
         mimetype: 'video/mp4'
       });
       
       const sendTime = Date.now() - sendStart;
+
+      // ✅ VALIDATION: Baileys response kontrolü
+      if (!sentMsg || !sentMsg.key) {
+        const errorMsg = `Send başarısız: Baileys invalid response (video ${i + 1})`;
+        logger.error(`[SEND-ERROR] ${errorMsg}`, { sentMsg });
+        addActivityLog('error', errorMsg);
+        throw new Error(errorMsg);
+      }
 
       sentMessages.push(sentMsg);
       
@@ -2775,7 +2783,9 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
         target: firstTarget.name,
         cacheTime,
         sendTime,
-        messageKey: sentMsg.key.id
+        messageKey: sentMsg.key.id,
+        hasKey: !!sentMsg.key,
+        hasRemoteJid: !!sentMsg.key?.remoteJid
       });
 
       // İstatistik
@@ -2821,13 +2831,20 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
           const cap = addCaptionVariation(baseCap, newSeedTarget.type);
           
           const cachedPath = await getOrCacheVideo(vUrl);
-          const videoStream = fs.createReadStream(cachedPath);
+          const videoBuffer = fs.readFileSync(cachedPath); // ✅ Buffer kullan
           
           const seedMsg = await safeSend(newSeedTarget.jid, {
-            video: videoStream,
+            video: videoBuffer, // ✅ Buffer kullan
             caption: cap,
             mimetype: 'video/mp4'
           });
+          
+          // ✅ VALIDATION: Seed response kontrolü
+          if (!seedMsg || !seedMsg.key) {
+            logger.error(`[SEED-ERROR] Seed upload başarısız (video ${i + 1}), eski seed korunuyor`);
+            addActivityLog('warning', `Seed rotation başarısız, eski seed korunuyor`);
+            break; // Seed rotation iptal, eski sentMessages korunsun
+          }
           
           sentMessages[i] = seedMsg; // Yeni seed mesajları kaydet
           logger.debug(`[SEED-ROTATION] Video ${i + 1} yeni seed olarak upload edildi`);
@@ -2869,6 +2886,18 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
         try {
           for (let v = 0; v < sentMessages.length; v++) {
             const msg = sentMessages[v];
+            
+            // ✅ VALIDATION: Forward öncesi mesaj kontrolü
+            if (!msg || !msg.key) {
+              logger.error(`[FORWARD-SKIP] Mesaj ${v + 1} geçersiz (key eksik), atlanıyor`, { 
+                msgExists: !!msg,
+                hasKey: !!msg?.key,
+                target: target.name
+              });
+              addActivityLog('warning', `Mesaj ${v + 1} geçersiz, atlanıyor (${target.name})`);
+              continue; // Bu mesajı atla, diğerlerine devam et
+            }
+            
             const fwdStart = Date.now();
             
             // safeSend ile forward (ban detection + retry)
