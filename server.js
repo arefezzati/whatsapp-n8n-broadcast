@@ -310,8 +310,10 @@ function addActivityLog(type, message) {
 const PORT = Number(process.env.PORT) || 3001;
 // Base path for reverse proxy support (e.g., "/whatsapp-web" or "" for direct access)
 const BASE_PATH = process.env.BASE_PATH || '';
-// Cross-platform temp directory
-const TMP_DIR = process.env.TMPDIR || os.tmpdir();
+
+// ✅ FIX: Video cache için PERSISTENT DISK kullan (sistem temp yerine)
+const TMP_DIR = PATHS.TMP_VIDEOS_DIR;
+
 // Gallery upload tmp folder - PERSISTENT DISK
 const GALLERY_TMP = PATHS.TMP_VIDEOS_DIR;
 if (!fs.existsSync(GALLERY_TMP)) {
