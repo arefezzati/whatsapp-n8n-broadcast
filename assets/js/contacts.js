@@ -330,7 +330,7 @@ class ContactManager {
     document.querySelectorAll('.country-section').forEach(section => {
       let hasVisibleContacts = false;
       section.querySelectorAll('.contact-item').forEach(item => {
-        const contactId = parseInt(item.dataset.contactId);
+        const contactId = parseInt(item.dataset.id);
         const isSelected = this.selectedContacts.has(contactId);
         
         const name = item.querySelector('.contact-name').textContent.toLowerCase();
