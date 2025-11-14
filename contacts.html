@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self';">
     <title>WhatsApp Kişi Yönetimi</title>
-    <link rel="stylesheet" href="/assets/css/contacts.css">
+    <link rel="stylesheet" href="/assets/css/contacts.css?v=4">
 </head>
 <body>
     <div class="container">
@@ -201,12 +201,20 @@
         </section>
     </div>
 
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Kişiler yükleniyor...</p>
+        </div>
+    </div>
+
     <!-- Toast Bildirimi -->
     <div id="toast" class="toast">
         <span id="toastMessage">Bildirim mesajı</span>
     </div>
 
     <!-- JavaScript -->
-    <script src="/assets/js/contacts.js"></script>
+    <script src="/assets/js/contacts.js?v=4"></script>
 </body>
 </html>

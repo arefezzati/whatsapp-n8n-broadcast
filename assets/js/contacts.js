@@ -9,57 +9,35 @@ class ContactManager {
     this.selectedContacts = new Set();
     this.countries = {};
     this.countryGroups = {};
-    // Lazy loading
-    this.renderedCount = 0;
-    this.batchSize = 50; // Her seferde 50 kişi render et
-    this.isLoading = false;
     this.init();
   }
 
   async init() {
+    this.showLoading(true);
     await this.loadCountries();
     this.populateCountryDropdown();
     await this.loadContacts();
     this.bindEvents();
-    this.setupLazyLoading(); // Lazy loading setup
     this.renderContacts();
     this.updateStats();
+    this.showLoading(false);
 
     console.log('WhatsApp Kişi Yönetimi başlatıldı');
   }
 
-  // Lazy loading setup
-  setupLazyLoading() {
-    const contactsList = document.getElementById('contactsList');
-    
-    contactsList.addEventListener('scroll', () => {
-      const scrollTop = contactsList.scrollTop;
-      const scrollHeight = contactsList.scrollHeight;
-      const clientHeight = contactsList.clientHeight;
-      
-      // Sayfa sonuna 200px kala yeni kişileri yükle
-      if (scrollHeight - scrollTop - clientHeight < 200 && !this.isLoading) {
-        this.loadMoreContacts();
-      }
-    });
+  // Loading göster/gizle
+  showLoading(show) {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+      loadingOverlay.style.display = show ? 'flex' : 'none';
+    }
   }
 
-  // Daha fazla kişi yükle
-  loadMoreContacts() {
-    if (this.renderedCount >= this.contacts.length) return;
-    
-    this.isLoading = true;
-    const nextBatch = this.contacts.slice(this.renderedCount, this.renderedCount + this.batchSize);
-    
-    nextBatch.forEach(contact => {
-      this.appendContact(contact);
-    });
-    
-    this.renderedCount += nextBatch.length;
-    this.isLoading = false;
-    
-    console.log(`Loaded ${this.renderedCount}/${this.contacts.length} contacts`);
-  }
+  // Lazy loading setup - KALDIRILDI
+  // setupLazyLoading() { ... }
+  
+  // Daha fazla kişi yükle - KALDIRILDI
+  // loadMoreContacts() { ... }
 
   // Ülke verilerini yükle
   async loadCountries() {
@@ -339,6 +317,8 @@ class ContactManager {
   // Kişileri filtrele
   filterContacts(searchTerm) {
     const filtered = searchTerm.toLowerCase();
+    const isEmpty = filtered.trim() === '';
+    
     document.querySelectorAll('.country-section').forEach(section => {
       let hasVisibleContacts = false;
       section.querySelectorAll('.contact-item').forEach(item => {
@@ -346,15 +326,27 @@ class ContactManager {
         const phone = item.querySelector('.contact-phone').textContent.toLowerCase();
         const country = section.querySelector('.country-name').textContent.toLowerCase();
 
-        const isVisible = name.includes(filtered) || phone.includes(filtered) || country.includes(filtered);
+        const isVisible = isEmpty || name.includes(filtered) || phone.includes(filtered) || country.includes(filtered);
         item.style.display = isVisible ? 'flex' : 'none';
         if (isVisible) hasVisibleContacts = true;
       });
+      
+      // Section'ı göster/gizle
       section.style.display = hasVisibleContacts ? 'block' : 'none';
+      
+      // Eğer arama yapılıyorsa VE sonuç varsa → otomatik AÇ
+      if (!isEmpty && hasVisibleContacts) {
+        section.classList.add('expanded');
+      }
+      // Eğer arama temizlendiyse → KAPAT
+      else if (isEmpty) {
+        section.classList.remove('expanded');
+      }
     });
   }
 
   // Kişileri render et (Lazy Loading)
+  // Kişileri render et (LAZY LOADING KALDIRILDI - TÜM KİŞİLER BİRDEN)
   renderContacts() {
     const contactsList = document.getElementById('contactsList');
     
@@ -368,109 +360,53 @@ class ContactManager {
       return;
     }
 
-    // İlk yükleme: Sadece başlangıç batch'ini render et
-    contactsList.innerHTML = '';
-    this.renderedCount = 0;
+    // Ülkelere göre grupla
+    const groupedContacts = this.groupByCountry();
     
-    // İlk 50 kişiyi yükle
-    this.loadMoreContacts();
+    // HTML'i oluştur
+    let html = '';
     
-    // Loading indicator ekle
-    const loadingDiv = document.createElement('div');
-    loadingDiv.id = 'loading-indicator';
-    loadingDiv.style.cssText = 'text-align:center; padding:20px; color:#999;';
-    loadingDiv.textContent = `${this.renderedCount}/${this.contacts.length} kişi yüklendi. Kaydırın...`;
-    contactsList.appendChild(loadingDiv);
-  }
-
-  // Tek bir kişiyi ekle (Lazy Loading için)
-  appendContact(contact) {
-    const contactsList = document.getElementById('contactsList');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    
-    // Ülke section'ını bul veya oluştur
-    let countrySection = document.querySelector(`[data-country="${contact.country}"]`);
-    
-    if (!countrySection) {
-      // Yeni ülke section oluştur
-      const country = this.countries[contact.country] || {
-        name: contact.country === 'UNKNOWN' ? 'Bilinmeyen Ülke' : contact.country,
-        flag: contact.country === 'UNKNOWN' ? '🌐' : '🌐',
-        code: contact.country === 'UNKNOWN' ? '?' : '+' + contact.country
+    Object.entries(groupedContacts).forEach(([countryCode, contacts]) => {
+      const country = this.countries[countryCode] || {
+        name: countryCode === 'UNKNOWN' ? 'Bilinmeyen Ülke' : countryCode,
+        flag: countryCode === 'UNKNOWN' ? '🌐' : '🌐',
+        code: countryCode === 'UNKNOWN' ? '+?' : '+' + countryCode
       };
       
-      countrySection = document.createElement('div');
-      countrySection.className = 'country-section';
-      countrySection.dataset.country = contact.country;
-      countrySection.innerHTML = `
-        <div class="country-header">
-          <div class="country-info">
-            <input type="checkbox" class="country-checkbox"
-                   onchange="contactManager.toggleCountry('${contact.country}')"
-                   onclick="event.stopPropagation()">
-            <span class="country-flag">${country.flag}</span>
-            <span class="country-name">${country.name}</span>
-            <span class="country-code">${country.code}</span>
+      const selectedInCountry = contacts.filter(c => this.selectedContacts.has(c.id)).length;
+      
+      // Country section (BAŞLANGIÇTA KAPALI - expanded class YOK)
+      html += `
+        <div class="country-section" data-country="${countryCode}">
+          <div class="country-header">
+            <div class="country-info">
+              <input type="checkbox" class="country-checkbox"
+                     onchange="contactManager.toggleCountry('${countryCode}')"
+                     onclick="event.stopPropagation()">
+              <span class="country-flag">${country.flag}</span>
+              <span class="country-name">${country.name}</span>
+              <span class="country-code">${country.code}</span>
+            </div>
+            <div class="country-stats" onclick="contactManager.toggleCountrySection('${countryCode}')">
+              <span class="country-count">${selectedInCountry}/${contacts.length} seçili</span>
+              <span class="toggle-arrow">▼</span>
+            </div>
           </div>
-          <div class="country-stats" onclick="contactManager.toggleCountrySection('${contact.country}')">
-            <span class="country-count">0 kişi</span>
-            <span class="toggle-arrow">▼</span>
-          </div>
-        </div>
-        <div class="contacts-list"></div>
+          <div class="country-contacts-list">
       `;
       
-      // Loading indicator'dan önce ekle
-      if (loadingIndicator) {
-        contactsList.insertBefore(countrySection, loadingIndicator);
-      } else {
-        contactsList.appendChild(countrySection);
-      }
-    }
-    
-    // Kişiyi section'a ekle
-    const contactsListDiv = countrySection.querySelector('.contacts-list');
-    const contactHtml = this.renderContact(contact);
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = contactHtml;
-    contactsListDiv.appendChild(tempDiv.firstChild);
-    
-    // Ülke istatistiklerini güncelle
-    this.updateCountryStats(contact.country);
-    
-    // Loading indicator'ı güncelle
-    if (loadingIndicator) {
-      loadingIndicator.textContent = `${this.renderedCount}/${this.contacts.length} kişi yüklendi. Kaydırın...`;
+      // Contact'ları ekle
+      contacts.forEach(contact => {
+        html += this.renderContact(contact);
+      });
       
-      // Tüm kişiler yüklendiyse indicator'ı kaldır
-      if (this.renderedCount >= this.contacts.length) {
-        loadingIndicator.remove();
-      }
-    }
-  }
-
-  // Ülke istatistiklerini güncelle
-  updateCountryStats(countryCode) {
-    const countrySection = document.querySelector(`[data-country="${countryCode}"]`);
-    if (!countrySection) return;
+      html += `
+          </div>
+        </div>
+      `;
+    });
     
-    const contactsInCountry = countrySection.querySelectorAll('.contact-item').length;
-    const selectedInCountry = countrySection.querySelectorAll('.contact-item.selected').length;
-    
-    const countSpan = countrySection.querySelector('.country-count');
-    if (countSpan) {
-      countSpan.textContent = `${selectedInCountry}/${contactsInCountry} seçili`;
-    }
-    
-    // Checkbox durumunu güncelle
-    const checkbox = countrySection.querySelector('.country-checkbox');
-    if (checkbox) {
-      const allSelected = selectedInCountry === contactsInCountry;
-      const someSelected = selectedInCountry > 0 && selectedInCountry < contactsInCountry;
-      
-      checkbox.checked = allSelected;
-      checkbox.indeterminate = someSelected;
-    }
+    contactsList.innerHTML = html;
   }
 
   // Tek kişi render et
@@ -478,18 +414,16 @@ class ContactManager {
     const isSelected = this.selectedContacts.has(contact.id);
     const initials = contact.name.split(' ').map(n => n[0]).join('').toUpperCase();
 
-    return `
-            <div class="contact-item ${isSelected ? 'selected' : ''}" data-id="${contact.id}">
-                <input type="checkbox" class="contact-checkbox" ${isSelected ? 'checked' : ''}
-                       onchange="contactManager.toggleContact(${contact.id})">
-                <div class="contact-avatar">${initials}</div>
-                <div class="contact-info">
-                    <div class="contact-name">${contact.name}</div>
-                    <div class="contact-phone">${contact.phone}</div>
-                </div>
-                <div class="contact-language language-${contact.language}">${contact.language.toUpperCase()}</div>
-            </div>
-        `;
+    return `<div class="contact-item ${isSelected ? 'selected' : ''}" data-id="${contact.id}">
+    <input type="checkbox" class="contact-checkbox" ${isSelected ? 'checked' : ''}
+           onchange="contactManager.toggleContact(${contact.id})">
+    <div class="contact-avatar">${initials}</div>
+    <div class="contact-info">
+        <div class="contact-name">${contact.name}</div>
+        <div class="contact-phone">${contact.phone}</div>
+    </div>
+    <div class="contact-language language-${contact.language}">${contact.language.toUpperCase()}</div>
+</div>`;
   }
 
   // Kişileri ülkeye göre grupla
