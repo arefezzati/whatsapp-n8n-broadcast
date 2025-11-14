@@ -333,7 +333,10 @@ const FORWARD_BURST_COOLDOWN = parseInt(process.env.FORWARD_BURST_COOLDOWN || '1
 // Chunk parametreleri (Anti-ban için optimize edilmiş)
 const CHUNK_SIZE = parseInt(process.env.CHUNK_SIZE || '12', 10);                   // 12 hedef/chunk (10-15 önerilen)
 
-// Seed rotation parametresi (optional complexity - advanced anti-ban)
+// Upload rotation parametresi (Yeni: Her N kişide bir video yeniden upload et)
+const UPLOAD_PER_SIZE = parseInt(process.env.UPLOAD_PER_SIZE || '60', 10);        // 60 kişide bir yeni upload (anti-bot pattern)
+
+// Seed rotation parametresi (optional complexity - advanced anti-ban) - DEPRECATED, UPLOAD_PER_SIZE kullan
 const SEED_INTERVAL = parseInt(process.env.SEED_INTERVAL || '0', 10);              // 0=disabled, 220=her 220 hedefte yeni seed upload
 
 // Job logs ring buffer (RAM leak önleme)
@@ -2815,51 +2818,56 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
       const currentChunk = targetChunks[chunkIdx];
       logger.info(`[CHUNK ${chunkIdx + 1}/${targetChunks.length}] ${currentChunk.length} hedef işleniyor...`);
 
-      // SEED ROTATION: Her N hedefte bir yeni seed upload (optional)
-      const shouldRotateSeed = SEED_INTERVAL > 0 && forwardedCount > 0 && forwardedCount % SEED_INTERVAL === 0;
-      if (shouldRotateSeed) {
-        logger.info(`[SEED-ROTATION] ${forwardedCount} hedef sonrası yeni seed upload...`);
-        addJobLog('info', `Seed rotation: ${forwardedCount} hedef sonrası yeni upload`);
+      for (const target of currentChunk) {
+        // ✅ UPLOAD ROTATION: Her UPLOAD_PER_SIZE kişide bir yeni upload yap
+        const shouldUpload = UPLOAD_PER_SIZE > 0 && (forwardedCount + 1) % UPLOAD_PER_SIZE === 0;
         
-        // Yeni rastgele hedef seç (contact veya group)
-        const newSeedTarget = currentChunk[0]; // Chunk'ın ilk hedefi seed olarak kullanılır
-        
-        // Yeni seed upload (videoları tekrar send et)
-        for (let i = 0; i < videoUrls.length; i++) {
-          const vUrl = videoUrls[i];
-          const baseCap = (captions && captions[i]) ? captions[i] : '';
-          const cap = addCaptionVariation(baseCap, newSeedTarget.type);
+        if (shouldUpload) {
+          logger.info(`[UPLOAD-ROTATION] ${forwardedCount + 1}. hedef: Yeni upload yapılıyor → ${target.name}`);
+          addJobLog('info', `Upload rotation: ${forwardedCount + 1}. hedefte yeni upload (${target.name})`);
+          addActivityLog('info', `📤 ${forwardedCount + 1}. hedef: Yeni upload → ${target.name}`);
           
-          const cachedPath = await getOrCacheVideo(vUrl);
-          const videoBuffer = fs.readFileSync(cachedPath); // ✅ Buffer kullan
-          
-          const seedMsg = await safeSend(newSeedTarget.jid, {
-            video: videoBuffer, // ✅ Buffer kullan
-            caption: cap,
-            mimetype: 'video/mp4'
-          });
-          
-          // ✅ VALIDATION: Seed response kontrolü
-          if (!seedMsg || !seedMsg.key) {
-            logger.error(`[SEED-ERROR] Seed upload başarısız (video ${i + 1}), eski seed korunuyor`);
-            addActivityLog('warning', `Seed rotation başarısız, eski seed korunuyor`);
-            break; // Seed rotation iptal, eski sentMessages korunsun
+          // Yeni upload (videoları bu hedefe send et)
+          for (let i = 0; i < videoUrls.length; i++) {
+            const vUrl = videoUrls[i];
+            const baseCap = (captions && captions[i]) ? captions[i] : '';
+            const cap = addCaptionVariation(baseCap, target.type);
+            
+            const cachedPath = await getOrCacheVideo(vUrl);
+            const videoBuffer = fs.readFileSync(cachedPath);
+            
+            const uploadStart = Date.now();
+            const uploadMsg = await safeSend(target.jid, {
+              video: videoBuffer,
+              caption: cap,
+              mimetype: 'video/mp4'
+            });
+            const uploadTime = Date.now() - uploadStart;
+            
+            // ✅ VALIDATION: Upload response kontrolü
+            if (!uploadMsg || !uploadMsg.key) {
+              logger.error(`[UPLOAD-ERROR] Upload başarısız (video ${i + 1}), eski mesajlar korunuyor`);
+              addActivityLog('warning', `Upload başarısız: ${target.name}, forward devam ediyor`);
+              break; // Upload iptal, eski sentMessages ile devam et
+            }
+            
+            sentMessages[i] = uploadMsg; // Yeni upload mesajları kaydet
+            logger.info(`[UPLOAD-ROTATION] Video ${i + 1} upload edildi (${uploadTime}ms) → ${target.name}`);
+            await delay(jitter(2000, 0.3));
           }
           
-          sentMessages[i] = seedMsg; // Yeni seed mesajları kaydet
-          logger.debug(`[SEED-ROTATION] Video ${i + 1} yeni seed olarak upload edildi`);
-          await delay(jitter(2000, 0.3));
+          forwardedCount++; // Upload hedefi sayılır
+          addJobLog('success', `Upload rotation tamamlandı: ${target.name}`);
+          logger.info(`[UPLOAD-ROTATION] ✅ Yeni upload tamamlandı: ${target.name}`);
+          
+          // İstatistik
+          global.monitorStats.totalProcessed += videoUrls.length;
+          global.monitorStats.todayCount += videoUrls.length;
+          
+          // Upload sonrası delay
+          await delay(jitter(BASE_FORWARD_DELAY, 0.3));
+          continue; // Bu hedefi atla (zaten upload yaptık), sonraki hedefe geç
         }
-        
-        forwardedCount++; // Seed hedefi sayılır
-        addJobLog('success', `Seed rotation tamamlandı: ${newSeedTarget.name}`);
-        logger.info(`[SEED-ROTATION] Yeni seed tamamlandı: ${newSeedTarget.name}`);
-        
-        // Seed rotation sonrası chunk'tan seed hedefi çıkar
-        currentChunk.shift();
-      }
-
-      for (const target of currentChunk) {
         // Circuit breaker kontrolü
         if (!breakerOk()) {
           logger.error('[GROUPED-FORWARD] Circuit breaker aktif, kampanya durduruluyor');
@@ -2988,12 +2996,13 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     const finalStatus = {
       requestId,
       success: true,
-      mode: 'baileys-forward-v3-optimized',
-      features: ['shuffle', 'jitter', 'circuit-breaker', 'chunk-system', 'safe-send', 'caption-variation', 'random-first-contact'],
+      mode: 'baileys-forward-v4-upload-rotation',
+      features: ['shuffle', 'jitter', 'circuit-breaker', 'chunk-system', 'safe-send', 'caption-variation', 'random-first-contact', 'upload-rotation'],
       config: {
         chunkSize: CHUNK_SIZE,
         forwardDelay: FORWARD_DELAY,
-        burstCooldown: FORWARD_BURST_COOLDOWN
+        burstCooldown: FORWARD_BURST_COOLDOWN,
+        uploadPerSize: UPLOAD_PER_SIZE
       },
       sentToFirst: firstTarget.name,
       firstTargetType: firstTarget.type,
@@ -3001,6 +3010,7 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
       totalTargets: unifiedTargets.length,
       forwardedTo: forwardedCount,
       failed: totalFailed,
+      uploadCount: Math.ceil(unifiedTargets.length / UPLOAD_PER_SIZE), // Toplam upload sayısı
       successRate: `${Math.round((forwardedCount / (unifiedTargets.length - 1)) * 100)}%`,
       processingTime: `${processingMinutes} dakika`,
       circuitBreakerStatus: breaker.open ? `⚠️ AÇIK (${breaker.reason})` : '✅ Kapalı'
