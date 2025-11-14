@@ -12,8 +12,8 @@
  * - Video için buffer kullanılır (base64 YOK)
  * - QR görseli data URL'dir; yalnızca ekranda gösterim
  */
-import dotenv from 'dotenv';
-dotenv.config();
+//import dotenv from 'dotenv';
+//dotenv.config();
 import express from "express";
 import fs from "fs";
 import path from "path";
