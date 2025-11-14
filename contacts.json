@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "lastUpdated": "2025-11-14T07:21:16.979Z",
+  "lastUpdated": "2025-11-14T07:27:22.837Z",
   "settings": {
     "defaultLanguage": "tr",
     "enabledLanguages": [
@@ -43007,7 +43007,7 @@
       "phone": "905312089812",
       "country": "TR",
       "language": "tr",
-      "active": true,
+      "active": false,
       "tags": [
         "whatsapp"
       ],

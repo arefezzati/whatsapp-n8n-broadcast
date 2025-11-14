@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self';">
     <title>WhatsApp Kişi Yönetimi</title>
-    <link rel="stylesheet" href="/assets/css/contacts.css?v=4">
+    <link rel="stylesheet" href="/assets/css/contacts.css?v=5">
 </head>
 <body>
     <div class="container">
@@ -36,6 +36,22 @@
         <section class="controls">
             <div class="search-container">
                 <input type="text" id="searchInput" class="search-input" placeholder="🔍 Kişi, telefon veya ülke ara...">
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label">Filtre:</label>
+                <label class="radio-label">
+                    <input type="radio" name="contactFilter" value="all" checked>
+                    <span>📋 Tümü</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="contactFilter" value="selected">
+                    <span>✅ Seçililer</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="contactFilter" value="unselected">
+                    <span>⭕ Seçili Olmayanlar</span>
+                </label>
             </div>
 
             <button class="btn btn-primary" id="addContactBtn">
@@ -215,6 +231,6 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="/assets/js/contacts.js?v=4"></script>
+    <script src="/assets/js/contacts.js?v=5"></script>
 </body>
 </html>

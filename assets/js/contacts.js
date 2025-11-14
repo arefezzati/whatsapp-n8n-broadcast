@@ -105,6 +105,11 @@ class ContactManager {
     document.getElementById('clearListBtn').addEventListener('click', () => this.clearContactsList());
     document.getElementById('searchInput').addEventListener('input', (e) => this.filterContacts(e.target.value));
 
+    // Radio button filtre event listener'ları
+    document.querySelectorAll('input[name="contactFilter"]').forEach(radio => {
+      radio.addEventListener('change', (e) => this.applyFilter(e.target.value));
+    });
+
     // Video gönderim event listener'ları
     document.getElementById('sendVideoBtn').addEventListener('click', () => this.toggleVideoForm());
     document.getElementById('cancelVideoBtn').addEventListener('click', () => this.toggleVideoForm(false));
@@ -316,17 +321,35 @@ class ContactManager {
 
   // Kişileri filtrele
   filterContacts(searchTerm) {
+    // Radio button filtresini al
+    const selectedFilter = document.querySelector('input[name="contactFilter"]:checked')?.value || 'all';
+    
     const filtered = searchTerm.toLowerCase();
     const isEmpty = filtered.trim() === '';
     
     document.querySelectorAll('.country-section').forEach(section => {
       let hasVisibleContacts = false;
       section.querySelectorAll('.contact-item').forEach(item => {
+        const contactId = parseInt(item.dataset.contactId);
+        const isSelected = this.selectedContacts.has(contactId);
+        
         const name = item.querySelector('.contact-name').textContent.toLowerCase();
         const phone = item.querySelector('.contact-phone').textContent.toLowerCase();
         const country = section.querySelector('.country-name').textContent.toLowerCase();
 
-        const isVisible = isEmpty || name.includes(filtered) || phone.includes(filtered) || country.includes(filtered);
+        // Arama filtresi
+        const searchFilter = isEmpty || name.includes(filtered) || phone.includes(filtered) || country.includes(filtered);
+        
+        // Radio button filtresi
+        let radioFilter = true;
+        if (selectedFilter === 'selected') {
+          radioFilter = isSelected;
+        } else if (selectedFilter === 'unselected') {
+          radioFilter = !isSelected;
+        }
+        
+        // Her iki filtre de geçerli olmalı
+        const isVisible = searchFilter && radioFilter;
         item.style.display = isVisible ? 'flex' : 'none';
         if (isVisible) hasVisibleContacts = true;
       });
@@ -338,11 +361,22 @@ class ContactManager {
       if (!isEmpty && hasVisibleContacts) {
         section.classList.add('expanded');
       }
-      // Eğer arama temizlendiyse → KAPAT
-      else if (isEmpty) {
+      // Eğer arama temizlendiyse VE "Tümü" seçiliyse → KAPAT
+      else if (isEmpty && selectedFilter === 'all') {
         section.classList.remove('expanded');
       }
+      // Filtre aktifse section'ları açık tut
+      else if (selectedFilter !== 'all' && hasVisibleContacts) {
+        section.classList.add('expanded');
+      }
     });
+  }
+
+  // Radio button filtreleme
+  applyFilter(filterType) {
+    // Mevcut arama terimini kullanarak filtrelemeyi yeniden uygula
+    const searchTerm = document.getElementById('searchInput').value;
+    this.filterContacts(searchTerm);
   }
 
   // Kişileri render et (Lazy Loading)
@@ -467,6 +501,13 @@ class ContactManager {
     const contact = this.contacts.find(c => c.id === contactId);
     if (contact) {
       this.updateCountryCheckbox(contact.country);
+    }
+
+    // Eğer filtre aktifse, filtrelemeyi yeniden uygula
+    const selectedFilter = document.querySelector('input[name="contactFilter"]:checked')?.value;
+    if (selectedFilter && selectedFilter !== 'all') {
+      const searchTerm = document.getElementById('searchInput').value;
+      this.filterContacts(searchTerm);
     }
   }
 
