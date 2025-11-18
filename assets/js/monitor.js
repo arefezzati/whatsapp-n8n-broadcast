@@ -215,6 +215,11 @@ class MonitorManager {
                     this.logs = data.activityLogs;
                     this.renderLogs();
                 }
+                
+                // ✅ Active jobs'ları güncelle
+                if (data.activeJobs) {
+                    this.renderActiveJobs(data.activeJobs);
+                }
             }
         } catch (error) {
             console.error('Monitor istatistikleri yüklenemedi:', error);
@@ -457,6 +462,55 @@ class MonitorManager {
         `).join('');
     }
 
+    renderActiveJobs(jobs) {
+        const container = document.getElementById('activeJobs');
+        
+        if (!jobs || jobs.length === 0) {
+            container.innerHTML = '<div class="log-item loading"><span class="log-time">✅</span><span class="log-message">Aktif işlem yok</span></div>';
+            return;
+        }
+        
+        container.innerHTML = jobs.map(job => {
+            const duration = Math.floor((Date.now() - job.startTime) / 1000);
+            const statusEmoji = job.status === 'processing' ? '🔄' : job.status === 'cancelled' ? '⛔' : '✅';
+            
+            return `
+                <div class="log-item ${job.status}">
+                    <span class="log-time">${statusEmoji} ${duration}s</span>
+                    <span class="log-message">
+                        ${job.requestId} - Progress: ${job.progress}%
+                        ${job.status === 'processing' ? 
+                            `<button class="btn-stop" onclick="monitor.cancelJob('${job.requestId}')">🛑 DURDUR</button>` : 
+                            ''}
+                    </span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async cancelJob(requestId) {
+        if (!confirm('Bu işlemi durdurmak istediğinizden emin misiniz?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`api/job/${requestId}/cancel`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                this.addLog('success', `✅ İşlem durduruldu: ${requestId}`);
+                await this.refreshData();
+            } else {
+                const data = await response.json();
+                this.addLog('error', `❌ Durdurma hatası: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Cancel hatası:', error);
+            this.addLog('error', `❌ Cancel isteği başarısız: ${error.message}`);
+        }
+    }
+
     clearLogs() {
         this.logs = [];
         this.renderLogs();
@@ -543,7 +597,8 @@ class MonitorManager {
 
 // Sayfa yüklendiğinde monitörü başlat
 document.addEventListener('DOMContentLoaded', () => {
-    window.monitorManager = new MonitorManager();
+    window.monitor = new MonitorManager(); // ✅ Global instance (onclick için)
+    window.monitorManager = window.monitor; // Backward compatibility
     console.log('Monitor sistemi hazır!');
 });
 

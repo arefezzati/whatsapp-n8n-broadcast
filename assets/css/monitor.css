@@ -150,6 +150,24 @@ body {
     background: #b91c1c;
 }
 
+/* ✅ Stop Button */
+.btn-stop {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 12px;
+}
+
+.btn-stop:hover {
+    background: #dc2626;
+    transform: scale(1.05);
+}
+
 /* Status Cards */
 .status-cards {
     display: grid;

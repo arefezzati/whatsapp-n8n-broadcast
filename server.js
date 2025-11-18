@@ -1847,9 +1847,24 @@ app.get("/disk-status", requireAuth, (req, res) => {
 // Monitor API - İstatistikler ve aktivite logları
 app.get("/api/monitor/stats", (req, res) => {
   try {
+    // ✅ Active jobs'ları topla
+    const activeJobs = [];
+    for (const [requestId, job] of jobStore.entries()) {
+      if (job.status === 'processing') {
+        activeJobs.push({
+          requestId,
+          status: job.status,
+          progress: job.progress,
+          startTime: job.startTime,
+          cancelled: job.cancelled
+        });
+      }
+    }
+    
     res.json({
       ...global.monitorStats,
-      activityLogs: global.activityLogs || []
+      activityLogs: global.activityLogs || [],
+      activeJobs
     });
   } catch (error) {
     console.error("[API] Monitor stats hatası:", error);
@@ -2382,6 +2397,47 @@ app.get("/open", (req, res) => {
   res.json({ opened: true, url: target });
 });
 
+// Job cancel endpoint
+app.post("/api/job/:requestId/cancel", (req, res) => {
+  const { requestId } = req.params;
+  const job = jobStore.get(requestId);
+  
+  if (!job) {
+    return res.status(404).json({
+      success: false,
+      error: 'Job not found',
+      requestId
+    });
+  }
+  
+  if (job.status === 'completed' || job.status === 'failed') {
+    return res.status(400).json({
+      success: false,
+      error: 'Job already finished',
+      status: job.status,
+      requestId
+    });
+  }
+  
+  // Cancel flag set et
+  job.cancelled = true;
+  job.status = 'cancelled';
+  job.logs.push({
+    level: 'warn',
+    message: '⚠️ İşlem kullanıcı tarafından durduruldu',
+    timestamp: new Date().toISOString()
+  });
+  
+  logger.warn(`[JOB-CANCEL] ${requestId} durduruldu`);
+  
+  res.json({
+    success: true,
+    message: 'Job cancelled',
+    requestId,
+    status: 'cancelled'
+  });
+});
+
 // Job status endpoint (async 202 response tracking için)
 app.get("/api/job/:requestId", (req, res) => {
   const { requestId } = req.params;
@@ -2409,6 +2465,9 @@ app.get("/api/job/:requestId", (req, res) => {
   res.json(job);
 });
 
+// ============ BATCH STORE (N8n batch toplama) ============
+const batchStore = new Map(); // { batchId: { videos: [], captions: [], count: 0, total: 0, country: '', language: '', timer: null } }
+
 app.post("/send-video-to-contacts-grouped", async (req, res) => {
   const startTime = Date.now();
   logEndpoint('/send-video-to-contacts-grouped', 'POST', req.body, 'started');
@@ -2424,6 +2483,70 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     });
   }
 
+  // ============ BATCH AGGREGATION (N8n'den gelen parçaları topla) ============
+  const { batchId, videoIndex, totalInBatch, isLastVideoInBatch, autoFanout } = req.body;
+  
+  if (batchId && totalInBatch > 1 && autoFanout) {
+    // Batch modu: Videoları topla, son video gelince işle
+    logger.info(`[BATCH] Video ${videoIndex}/${totalInBatch} alındı (batchId: ${batchId})`);
+    
+    if (!batchStore.has(batchId)) {
+      batchStore.set(batchId, {
+        videos: [],
+        captions: [],
+        count: 0,
+        total: totalInBatch,
+        country: req.body.country || '',
+        language: req.body.language || '',
+        timer: null
+      });
+    }
+    
+    const batch = batchStore.get(batchId);
+    
+    // Video ve caption'ı ekle
+    const videoUrl = Array.isArray(req.body.videoUrls) ? req.body.videoUrls[0] : req.body.videoUrl;
+    const caption = req.body.caption || '';
+    
+    batch.videos.push(videoUrl);
+    batch.captions.push(caption);
+    batch.count++;
+    
+    // Safety timeout: 30 saniye içinde tüm videolar gelmezse yine de işle
+    if (batch.timer) clearTimeout(batch.timer);
+    batch.timer = setTimeout(() => {
+      logger.warn(`[BATCH] ⏱️ Timeout: ${batchId}, ${batch.count}/${batch.total} video ile işlem başlatılıyor (eksik videolar var!)`);
+      batchStore.delete(batchId);
+      // NOT: Timeout durumunda işlem YAPILMAYACAK (incomplete batch)
+      // Sadece store'dan sil, N8n retry yapmalı
+    }, 30000);
+    
+    // Son video değilse sadece kabul et ve dön
+    if (!isLastVideoInBatch && batch.count < batch.total) {
+      return res.status(200).json({
+        success: true,
+        message: 'Video added to batch',
+        batchId,
+        collected: batch.count,
+        total: batch.total,
+        pending: batch.total - batch.count
+      });
+    }
+    
+    // Son video geldi veya tamamlandı - batch'i işle
+    clearTimeout(batch.timer);
+    logger.info(`[BATCH] ✅ Tamamlandı: ${batchId}, ${batch.count} video toplandı, işlem başlatılıyor`);
+    
+    // Batch'i req.body'ye dönüştür (aşağıdaki normal akış kullanacak)
+    req.body.videoUrls = batch.videos;
+    req.body.captions = batch.captions;
+    req.body.country = batch.country;
+    req.body.language = batch.language;
+    batchStore.delete(batchId);
+    
+    // Artık normal akış devam edecek (videoUrls array olarak hazır)
+  }
+
   // ============ ASYNC RESPONSE (Timeout önleme) ============
   // İsteği hemen kabul et, işlemi arka planda yap
   const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -2435,7 +2558,8 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     progress: 0,
     startTime: Date.now(),
     logs: [],
-    result: null
+    result: null,
+    cancelled: false  // ✅ Cancel flag
   });
   
   // N8n'e hemen 202 Accepted dön (timeout önleme)
@@ -2816,6 +2940,21 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
     addJobLog('info', `${remainingTargets.length} hedefe forward başlatıldı (${targetChunks.length} chunk)`);
 
     for (let chunkIdx = 0; chunkIdx < targetChunks.length; chunkIdx++) {
+      // ✅ CANCEL CHECK: Her chunk başında kontrol et
+      const job = jobStore.get(requestId);
+      if (job && job.cancelled) {
+        logger.warn(`[CHUNK ${chunkIdx + 1}] ⚠️ İşlem iptal edildi, durduruluyor...`);
+        addJobLog('warn', `İşlem ${forwardedCount} kişiye gönderildikten sonra durduruldu`);
+        finishJob('cancelled', {
+          message: 'İşlem kullanıcı tarafından durduruldu',
+          sentCount: forwardedCount + 1,
+          totalTargets: remainingTargets.length + 1,
+          cancelledAt: chunkIdx + 1,
+          totalChunks: targetChunks.length
+        });
+        return; // İşlemi tamamen bitir
+      }
+      
       const currentChunk = targetChunks[chunkIdx];
       logger.info(`[CHUNK ${chunkIdx + 1}/${targetChunks.length}] ${currentChunk.length} hedef işleniyor...`);
 
