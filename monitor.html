@@ -14,8 +14,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav class="nav">
-        <h1>📱 WhatsApp Bridge</h1>
+    <div class="top-bar">
+        <a href="./" class="logo-container">
+            <img src="./assets/img/byte_export.png" alt="ByteExport Logo" class="logo-img">
+        </a>
+        <button class="hamburger-menu" id="hamburgerMenu" aria-label="Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </div>
+    <nav class="nav" id="mainNav">
         <div class="nav-menu">
             <a href="./" class="nav-link">🏠 Ana Sayfa</a>
             <a href="contacts" class="nav-link">👥 Kişiler</a>
@@ -26,8 +35,8 @@
 
     <div class="container">
         <div class="page-header">
-            <h1>📊 Sistem Monitörü</h1>
-            <p>WhatsApp Bridge performans ve durum takibi</p>
+            <h1>Sistem Monitörü</h1>
+            <p>Performans ve durum takibi</p>
             <div class="refresh-controls">
                 <button id="toggleRefresh" class="btn btn-primary">⏸️ Durdur</button>
                 <span class="refresh-status">🔄 5sn'de yenileniyor...</span>
@@ -257,6 +266,38 @@
         </div>
     </div>
 
+    <script>
+        // Hamburger Menu Toggle
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const mainNav = document.getElementById('mainNav');
+
+        if (hamburgerMenu && mainNav) {
+            hamburgerMenu.addEventListener('click', function() {
+                this.classList.toggle('active');
+                mainNav.classList.toggle('active');
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', function(event) {
+                const isClickInsideNav = mainNav.contains(event.target);
+                const isClickOnHamburger = hamburgerMenu.contains(event.target);
+                
+                if (!isClickInsideNav && !isClickOnHamburger && mainNav.classList.contains('active')) {
+                    hamburgerMenu.classList.remove('active');
+                    mainNav.classList.remove('active');
+                }
+            });
+
+            // Close menu when clicking on a link
+            const navLinks = mainNav.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    hamburgerMenu.classList.remove('active');
+                    mainNav.classList.remove('active');
+                });
+            });
+        }
+    </script>
     <script src="assets/js/monitor.js"></script>
 </body>
 </html>

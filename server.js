@@ -134,20 +134,26 @@ function requireAuth(req, res, next) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Erişim Engellendi</title>
       <style>
-        body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e5e7eb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-        .card{background:#111827;padding:40px;border-radius:16px;text-align:center;max-width:400px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
-        h1{color:#ef4444;font-size:48px;margin:0 0 16px}
-        p{color:#9ca3af;line-height:1.6;margin:0 0 24px}
-        .code{background:#1f2937;padding:12px;border-radius:8px;font-family:monospace;color:#fbbf24;margin:20px 0}
+        :root{--primary-dark:#001D6C;--primary-medium:#003399;--bg-gradient-start:#EBF5FF;--bg-gradient-end:#E8E9FF;--text-primary:#0F172A;--text-secondary:#475569;--text-white:#FFFFFF;--accent-red:#EF4444;--accent-yellow:#FCD34D;--border-light:#E2E8F0;--radius-lg:16px;--radius-xl:24px;--shadow-neon:0 0 24px -16px rgba(0,29,108,0.25);--shadow-neon-highlight:0 0 40px -12px rgba(0,29,108,0.5)}
+        body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,var(--bg-gradient-start) 0%,#FFFFFF 50%,var(--bg-gradient-end) 100%);color:var(--text-primary);display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}
+        .card{background:linear-gradient(135deg,rgba(0,29,108,0.4) 0%,rgba(0,51,153,0.2) 50%,rgba(0,29,108,0.4) 100%);padding:1px;border-radius:var(--radius-xl);box-shadow:var(--shadow-neon-highlight);max-width:500px;width:100%}
+        .card-inner{background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);padding:48px 40px;border-radius:calc(var(--radius-xl) - 1px);text-align:center}
+        h1{font-size:64px;margin:0 0 16px;filter:drop-shadow(0 4px 8px rgba(239,68,68,0.3))}
+        h2{color:var(--accent-red);font-size:28px;font-weight:700;margin:0 0 16px;letter-spacing:-0.025em}
+        p{color:var(--text-secondary);line-height:1.625;margin:0 0 24px;font-size:16px}
+        .code{background:linear-gradient(135deg,rgba(0,29,108,0.1) 0%,rgba(0,51,153,0.05) 100%);padding:16px 24px;border-radius:12px;font-family:'Courier New',monospace;color:var(--primary-dark);margin:24px 0;font-weight:600;font-size:15px;border:1px solid var(--border-light)}
+        .small-text{font-size:14px;color:var(--text-secondary);font-weight:500}
       </style>
     </head>
     <body>
       <div class="card">
-        <h1>🔒</h1>
-        <h2 style="color:#ef4444;margin:0 0 16px">Erişim Engellendi</h2>
-        <p>Bu sayfaya erişim için geçerli bir yetkilendirme gereklidir.</p>
-        <div class="code">403 Forbidden</div>
-        <p style="font-size:14px">Yetkili erişim için web sitenizden bağlantıyı kullanın.</p>
+        <div class="card-inner">
+          <h1>🔒</h1>
+          <h2>Erişim Engellendi</h2>
+          <p>Bu sayfaya erişim için geçerli bir yetkilendirme gereklidir.</p>
+          <div class="code">403 Forbidden</div>
+          <p class="small-text">Yetkili erişim için web sitenizden bağlantıyı kullanın.</p>
+        </div>
       </div>
     </body>
     </html>
@@ -1265,57 +1271,494 @@ const HTML_PAGE = `<!doctype html>
 <base href="${BASE_PATH ? BASE_PATH + '/' : '/'}">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>WhatsApp Bridge — wa-bridge-local</title>
+<title>Byte Export Whatsapp Bridge</title>
 <style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; margin:0; background:#0f172a; color:#e5e7eb; display:flex; min-height:100vh; align-items:center; justify-content:center; flex-direction:column}
-  .nav{position:fixed; top:0; left:0; right:0; background:#111827; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:1000}
-  .nav h1{color:#25D366; font-size:18px; margin:0}
-  .nav-menu{display:flex; gap:16px}
-  .nav-link{color:#9ca3af; text-decoration:none; padding:8px 16px; border-radius:6px; transition:all 0.3s; font-size:14px; font-weight:500}
-  .nav-link:hover{background:#25D366; color:white}
-  .nav-link.active{background:#25D366; color:white}
-  .card{background:#111827; padding:32px; border-radius:16px; width:min(520px,92vw); box-shadow:0 10px 30px rgba(0,0,0,.35); margin-top:80px}
-  h2{font-size:24px;margin:0 0 8px; color:#25D366}
-  p{margin:8px 0 0;color:#9ca3af; line-height:1.5}
-  .qr{margin-top:24px; background:#fff; padding:16px; border-radius:12px; display:flex; align-items:center; justify-content:center}
-  #qr{width:100%; height:auto; border-radius:8px; max-width:300px}
-  .status{margin-top:18px; font-size:15px; padding:12px; border-radius:8px; text-align:center}
-  .status.ok{background:#064e3b; color:#34d399; border:1px solid #065f46}
-  .status.warn{background:#451a03; color:#f59e0b; border:1px solid #92400e}
-  .features{margin-top:24px; padding:20px; background:#1f2937; border-radius:12px}
-  .features h3{color:#e5e7eb; margin:0 0 12px; font-size:16px}
-  .features ul{margin:0; padding-left:20px; color:#9ca3af}
-  .features li{margin:6px 0; line-height:1.4}
-  .footer{margin-top:24px; text-align:center; font-size:13px; color:#6b7280}
+  :root {
+    --primary-dark: #001D6C;
+    --primary-medium: #003399;
+    --primary-light: #0047AB;
+    --bg-main: rgb(248, 249, 250);
+    --bg-white: #FFFFFF;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-tertiary: #64748B;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --error: #EF4444;
+    --border-light: #ced3da;
+    --border-medium: #8994a2;
+    --border-primary: rgba(0, 29, 108, 0.2);
+    --border-primary-strong: rgba(0, 29, 108, 0.4);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-neon: 0 0 24px -16px rgba(0, 29, 108, 0.25);
+    --shadow-neon-highlight: 0 0 40px -12px rgba(0, 29, 108, 0.5);
+    --space-2: 0.5rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+  }
+  
+  * { box-sizing: border-box; }
+  
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+    margin: 0;
+    background: linear-gradient(135deg, #EBF5FF 0%, #FFFFFF 50%, #E8E9FF 100%);
+    color: var(--text-primary);
+    display: flex;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  
+  /* Top Bar - Desktop */
+  .top-bar {
+  width: 120px;
+    position: fixed;
+    top: 1px;
+    left: 16px;
+    right: 16px;
+    z-index: 1001;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .logo-container {
+    text-decoration: none;
+    display: block;
+  }
+  
+  .logo-img {
+    width: 96px;
+    height: auto;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    transition: transform 0.2s ease;
+  }
+  
+  .logo-img:hover {
+    transform: scale(1.05);
+  }
+  
+  .hamburger-menu {
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: 2px solid var(--primary-dark);
+    border-radius: 8px;
+    cursor: pointer;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+    transition: all 0.3s ease;
+  }
+  
+  .hamburger-menu span {
+    width: 24px;
+    height: 2px;
+    background: var(--primary-dark);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+  }
+  
+  .hamburger-menu.active {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+  }
+  
+  .hamburger-menu.active span {
+    background: white;
+  }
+  
+  .hamburger-menu.active span:nth-child(1) {
+    transform: rotate(45deg) translate(7px, 7px);
+  }
+  
+  .hamburger-menu.active span:nth-child(2) {
+    opacity: 0;
+  }
+  
+  .hamburger-menu.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -7px);
+  }
+  
+  .disk-status-link {
+    display: none;
+  }
+  
+  /* Navigation - Desktop */
+  .nav {
+    height:110px;
+    position: fixed;
+    top: 1px;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    padding: var(--space-4) var(--space-6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+    z-index: 1000;
+  }
+  
+  .nav-menu { display: flex; gap: var(--space-4); }
+  
+  .nav-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: var(--space-2) var(--space-4);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+  
+  .nav-link:hover {
+    background: var(--bg-main);
+    transform: scale(1.05);
+  }
+  
+  .nav-link.active {
+    background: var(--primary-dark);
+    color: white;
+    box-shadow: 0 8px 16px -4px rgba(0, 29, 108, 0.3);
+  }
+  
+  .card {
+    background: transparent;
+    border: 2px solid transparent;
+    border-image: linear-gradient(135deg, rgba(0,29,108,0.4) 0%, rgba(0,51,153,0.2) 50%, rgba(0,29,108,0.4) 100%) 1;
+    border-radius: 24px;
+    width: min(520px, 92vw);
+    margin-top: 100px;
+    padding: var(--space-8);
+  }
+  
+  .card > * {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+  }
+  
+  h2 {
+    font-size: 24px;
+    margin: 0 0 var(--space-2);
+    color: var(--primary-dark);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+  
+  p {
+    margin: var(--space-2) 0 0;
+    color: var(--text-secondary);
+    line-height: 1.625;
+  }
+  
+  .qr {
+    margin-top: var(--space-6);
+    background: white;
+    padding: var(--space-4);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-md);
+  }
+  
+  #qr {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    max-width: 300px;
+  }
+  
+  .status {
+    margin-top: var(--space-4);
+    font-size: 15px;
+    padding: var(--space-4);
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  
+  .status.ok {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border-color: var(--success);
+  }
+  
+  .status.warn {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+    border-color: var(--warning);
+  }
+  
+  .features {
+    margin-top: var(--space-6);
+    padding: var(--space-6);
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+  }
+  
+  .features h3 {
+    color: var(--primary-dark);
+    margin: 0 0 var(--space-4);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  
+  .features ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--text-secondary);
+  }
+  
+  .features li {
+    margin: var(--space-2) 0;
+    line-height: 1.625;
+  }
+  
+  .footer {
+    margin-top: var(--space-6);
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-tertiary);
+  }
 
-  /* Modal Styles */
-  .modal{display:none; position:fixed; z-index:2000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.7)}
-  .modal-content{background:#111827; margin:10% auto; padding:0; width:min(500px,90vw); border-radius:12px; color:#e5e7eb}
-  .modal-header{padding:20px; border-bottom:1px solid #374151; display:flex; justify-content:space-between; align-items:center}
-  .modal-header h3{margin:0; color:#25D366}
-  .close{color:#9ca3af; float:right; font-size:28px; font-weight:bold; cursor:pointer}
-  .close:hover{color:#e5e7eb}
-  .modal-body{padding:20px}
-  .status-info{margin-bottom:20px}
-  .status-row{display:flex; justify-content:space-between; margin:10px 0; padding:8px 0; border-bottom:1px solid #374151}
-  .status-label{font-weight:500; color:#9ca3af}
-  .status-value{color:#e5e7eb}
-  .modal-actions{display:flex; gap:10px; justify-content:center}
-  .btn{padding:10px 20px; border:none; border-radius:6px; cursor:pointer; font-weight:500; transition:all 0.3s}
-  .btn-danger{background:#dc2626; color:white}
-  .btn-danger:hover{background:#b91c1c}
-  .btn-secondary{background:#6b7280; color:white}
-  .btn-secondary:hover{background:#4b5563}
+  /* Modal Styles - ByteExport Design */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  
+  .modal-content {
+    background: transparent;
+    border: 2px solid transparent;
+    border-image: linear-gradient(135deg, rgba(0,29,108,0.4) 0%, rgba(0,51,153,0.2) 50%, rgba(0,29,108,0.4) 100%) 1;
+    padding: 0;
+    margin: 10% auto;
+    width: min(500px, 90vw);
+    border-radius: 24px;
+  }
+  
+  .modal-content > div {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border-radius: 22px;
+  }
+  
+  .modal-header {
+    padding: var(--space-6);
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .modal-header h3 {
+    margin: 0;
+    color: var(--primary-dark);
+    font-weight: 700;
+    font-size: 20px;
+  }
+  
+  .close {
+    color: var(--text-secondary);
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+  }
+  
+  .close:hover {
+    color: var(--primary-dark);
+    background: var(--bg-main);
+  }
+  
+  .modal-body {
+    padding: var(--space-6);
+  }
+  
+  .status-info {
+    margin-bottom: var(--space-6);
+  }
+  
+  .status-row {
+    display: flex;
+    justify-content: space-between;
+    margin: var(--space-4) 0;
+    padding: var(--space-4);
+    background: var(--bg-main);
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+  }
+  
+  .status-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  
+  .status-value {
+    color: var(--primary-dark);
+    font-weight: 600;
+  }
+  
+  .modal-actions {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .btn {
+    padding: var(--space-4) var(--space-6);
+    border: 1px solid;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    font-size: 14px;
+  }
+  
+  .btn-danger {
+    background: white;
+    color: var(--error);
+    border-color: var(--error);
+  }
+  
+  .btn-danger:hover {
+    background: var(--error);
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px -4px rgba(239, 68, 68, 0.3);
+  }
+  
+  .btn-secondary {
+    background: white;
+    color: var(--primary-dark);
+    border-color: var(--border-medium);
+  }
+  
+  .btn-secondary:hover {
+    background: var(--primary-dark);
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px -4px rgba(0, 29, 108, 0.3);
+  }
+  
+  @media (max-width: 768px) {
+    /* Top Bar - Mobile */
+    .top-bar {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 1001;
+      background: white;
+      padding: 6px 10px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo-img {
+      width: 72px;
+    }
+    
+    .hamburger-menu {
+      display: flex;
+    }
+    
+    .nav {
+    height: unset !important;
+      top: 105px;
+      left: 0;
+      right: 0;
+      padding: 0;
+      background: rgba(255, 255, 255, 0.98);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      box-shadow: none;
+    }
+    
+    .nav.active {
+      max-height: 300px;
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .nav-menu {
+      flex-direction: column;
+      width: 100%;
+      padding: 12px 0;
+    }
+    
+    .nav-link {
+      width: 100%;
+      text-align: center;
+      padding: 12px 16px;
+      border-radius: 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 14px;
+    }
+    
+    .nav-link:last-child {
+      border-bottom: none;
+    }
+    
+    body {
+      padding-top: 80px;
+    }
+  }
 </style>
 </head>
 <body>
-  <nav class="nav">
-    <h1>📱 WhatsApp Bridge</h1>
+  <div class="top-bar">
+    <a href="./" class="logo-container">
+      <img src="./assets/img/byte_export.png" alt="ByteExport Logo" class="logo-img">
+    </a>
+    <button class="hamburger-menu" id="hamburgerMenu" aria-label="Menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+  <nav class="nav" id="mainNav">
     <div class="nav-menu">
       <a href="./" class="nav-link active">🏠 Ana Sayfa</a>
       <a href="contacts" class="nav-link">👥 Kişiler</a>
       <a href="monitor" class="nav-link">📊 Monitör</a>
-      <a href="disk-status" class="nav-link">💾 Disk Durumu</a>
+      <a href="disk-status" class="nav-link disk-status-link">💾 Disk Durumu</a>
       <a href="#" class="nav-link" onclick="openStatusModal()">⚡ Durum</a>
     </div>
   </nav>
@@ -1338,7 +1781,7 @@ const HTML_PAGE = `<!doctype html>
     </div>
 
     <div class="footer">
-      wa-bridge-local v1.0 — Svelto Stella WhatsApp Automation
+      wa-bridge-local v1.0 — Byte Export WhatsApp Automation
     </div>
   </div>
 
@@ -1381,6 +1824,37 @@ const HTML_PAGE = `<!doctype html>
 <script>
 // Global BASE_PATH for API calls
 window.BASE_PATH = "${BASE_PATH || ''}";
+
+// Hamburger Menu Toggle
+const hamburgerMenu = document.getElementById('hamburgerMenu');
+const mainNav = document.getElementById('mainNav');
+
+if (hamburgerMenu && mainNav) {
+  hamburgerMenu.addEventListener('click', function() {
+    this.classList.toggle('active');
+    mainNav.classList.toggle('active');
+  });
+
+  // Close menu when clicking outside
+  document.addEventListener('click', function(event) {
+    const isClickInsideNav = mainNav.contains(event.target);
+    const isClickOnHamburger = hamburgerMenu.contains(event.target);
+    
+    if (!isClickInsideNav && !isClickOnHamburger && mainNav.classList.contains('active')) {
+      hamburgerMenu.classList.remove('active');
+      mainNav.classList.remove('active');
+    }
+  });
+
+  // Close menu when clicking on a link
+  const navLinks = mainNav.querySelectorAll('.nav-link');
+  navLinks.forEach(link => {
+    link.addEventListener('click', function() {
+      hamburgerMenu.classList.remove('active');
+      mainNav.classList.remove('active');
+    });
+  });
+}
 
 async function refresh(){
   try{
@@ -2871,17 +3345,31 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
       return; // 202 zaten gönderildi
     }
 
+    // ✅ FIX: TÜM VİDEOLARI ÖNCE İNDİR (cache'le)
+    logger.info(`[DOWNLOAD] ${videoUrls.length} video indiriliyor...`);
+    addJobLog('info', `${videoUrls.length} video indiriliyor...`);
+    const cachedPaths = [];
     for (let i = 0; i < videoUrls.length; i++) {
-      const vUrl = videoUrls[i];
+      logger.info(`[DOWNLOAD] Video ${i + 1}/${videoUrls.length} indiriliyor...`);
+      const downloadStart = Date.now();
+      const cachedPath = await getOrCacheVideo(videoUrls[i]);
+      const downloadTime = Date.now() - downloadStart;
+      cachedPaths.push(cachedPath);
+      logger.info(`[DOWNLOAD] ✅ Video ${i + 1} indirildi (${downloadTime}ms)`);
+    }
+    addJobLog('success', `${videoUrls.length} video indirildi, gönderim başlatılıyor`);
+    logger.info(`[DOWNLOAD] ✅ Tüm videolar indirildi, gönderime başlanıyor`);
+
+    // ✅ İNDİRİLEN VIDEOLARI GÖNDER
+    for (let i = 0; i < videoUrls.length; i++) {
+      const cachedPath = cachedPaths[i];
       const baseCap = (captions && captions[i]) ? captions[i] : '';
       
       // Caption varyasyon ekle (ilk hedef için)
       const cap = addCaptionVariation(baseCap, firstTarget.type);
 
-      logger.info(`[SEND] Video ${i + 1}/${videoUrls.length} cache'leniyor...`);
-      const cacheStart = Date.now();
-      const cachedPath = await getOrCacheVideo(vUrl);
-      const cacheTime = Date.now() - cacheStart;
+      logger.info(`[SEND] Video ${i + 1}/${videoUrls.length} gönderiliyor...`);
+      logger.info(`[SEND] Video ${i + 1}/${videoUrls.length} gönderiliyor...`);
       
       // ✅ FIX: Buffer kullan (stream ve path yerine - en güvenilir yöntem)
       const videoBuffer = fs.readFileSync(cachedPath);
@@ -2909,7 +3397,6 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
       
       logger.info(`[SEND] Video ${i + 1}/${videoUrls.length} gönderildi`, {
         target: firstTarget.name,
-        cacheTime,
         sendTime,
         messageKey: sentMsg.key.id,
         hasKey: !!sentMsg.key,
@@ -2967,13 +3454,23 @@ app.post("/send-video-to-contacts-grouped", async (req, res) => {
           addJobLog('info', `Upload rotation: ${forwardedCount + 1}. hedefte yeni upload (${target.name})`);
           addActivityLog('info', `📤 ${forwardedCount + 1}. hedef: Yeni upload → ${target.name}`);
           
-          // Yeni upload (videoları bu hedefe send et)
+          // ✅ FIX: Önce tüm videoları indir (upload rotation için)
+          const uploadCachedPaths = [];
           for (let i = 0; i < videoUrls.length; i++) {
-            const vUrl = videoUrls[i];
+            logger.info(`[UPLOAD-ROTATION] Video ${i + 1}/${videoUrls.length} indiriliyor...`);
+            const downloadStart = Date.now();
+            const cachedPath = await getOrCacheVideo(videoUrls[i]);
+            const downloadTime = Date.now() - downloadStart;
+            uploadCachedPaths.push(cachedPath);
+            logger.info(`[UPLOAD-ROTATION] ✅ Video ${i + 1} indirildi (${downloadTime}ms)`);
+          }
+          
+          // Yeni upload (indirilen videoları bu hedefe send et)
+          for (let i = 0; i < videoUrls.length; i++) {
+            const cachedPath = uploadCachedPaths[i];
             const baseCap = (captions && captions[i]) ? captions[i] : '';
             const cap = addCaptionVariation(baseCap, target.type);
             
-            const cachedPath = await getOrCacheVideo(vUrl);
             const videoBuffer = fs.readFileSync(cachedPath);
             
             const uploadStart = Date.now();
